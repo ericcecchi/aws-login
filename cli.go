@@ -4,6 +4,7 @@ import (
 	"flag"
 	"io"
 	"os"
+	"strings"
 )
 
 func parseArgs(args []string) (Args, error) {
@@ -23,7 +24,7 @@ func parseArgs(args []string) (Args, error) {
 	versionFlag := fs.Bool("version", false, "Print version")
 	versionShort := fs.Bool("v", false, "Print version")
 
-	if err := fs.Parse(args); err != nil {
+	if err := fs.Parse(normalizeArgs(args)); err != nil {
 		return Args{}, err
 	}
 
@@ -71,4 +72,60 @@ func logWriter(printEnv bool) io.Writer {
 		return os.Stderr
 	}
 	return os.Stdout
+}
+
+func normalizeArgs(args []string) []string {
+	flagWithValue := map[string]struct{}{
+		"--account":      {},
+		"--role":         {},
+		"--alias":        {},
+		"--profile":      {},
+		"--sso-session":  {},
+		"--region":       {},
+		"--kube-context": {},
+	}
+	flagBool := map[string]struct{}{
+		"--no-kube":         {},
+		"--non-interactive": {},
+		"--print-env":       {},
+		"--version":         {},
+	}
+
+	flags := make([]string, 0, len(args))
+	positionals := make([]string, 0, len(args))
+
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if arg == "--" {
+			positionals = append(positionals, args[i+1:]...)
+			break
+		}
+		if strings.HasPrefix(arg, "-") && arg != "-" {
+			name := arg
+			if strings.HasPrefix(arg, "--") {
+				if idx := strings.Index(arg, "="); idx != -1 {
+					name = arg[:idx]
+				}
+			}
+			if name == "-v" {
+				flags = append(flags, arg)
+				continue
+			}
+			if _, ok := flagWithValue[name]; ok {
+				flags = append(flags, arg)
+				if !strings.Contains(arg, "=") && i+1 < len(args) {
+					flags = append(flags, args[i+1])
+					i++
+				}
+				continue
+			}
+			if _, ok := flagBool[name]; ok {
+				flags = append(flags, arg)
+				continue
+			}
+		}
+		positionals = append(positionals, arg)
+	}
+
+	return append(flags, positionals...)
 }

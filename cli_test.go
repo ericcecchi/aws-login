@@ -41,6 +41,19 @@ func TestParseArgsFlags(t *testing.T) {
 	}
 }
 
+func TestParseArgsInterspersedFlags(t *testing.T) {
+	args, err := parseArgs([]string{"dev", "admin", "--print-env"})
+	if err != nil {
+		t.Fatalf("parseArgs error: %v", err)
+	}
+	if args.Target != "dev" || args.Role != "admin" {
+		t.Fatalf("unexpected positional args: %+v", args)
+	}
+	if !args.PrintEnv {
+		t.Fatalf("expected PrintEnv=true")
+	}
+}
+
 func TestParseArgsShortVersion(t *testing.T) {
 	args, err := parseArgs([]string{"-v"})
 	if err != nil {
