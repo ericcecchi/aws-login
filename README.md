@@ -137,6 +137,22 @@ If `~/.aws/config` is missing or no SSO sessions are configured, the tool will:
 go build .
 ```
 
+## Conventional Commits
+
+Releases are automated with Semantic Release and require Conventional Commit messages.
+Use these formats so versions are bumped correctly:
+
+- `feat: add support for profile aliases` (minor)
+- `fix: handle missing sso sessions` (patch)
+- `feat!: drop legacy awscli v1 support` (major)
+- `fix!: change default region behavior` (major)
+
+For breaking changes, add `!` after the type or include a footer like:
+
+```
+BREAKING CHANGE: remove deprecated flags
+```
+
 ## License
 
 MIT. See `License`.
