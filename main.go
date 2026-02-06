@@ -19,6 +19,11 @@ func main() {
 		return
 	}
 
+	if args.ShellInit {
+		fmt.Print(shellInitScript(detectShell()))
+		return
+	}
+
 	writer := logWriter(args.PrintEnv)
 
 	if !commandExists("aws") {

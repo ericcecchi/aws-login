@@ -21,6 +21,7 @@ func parseArgs(args []string) (Args, error) {
 	noKube := fs.Bool("no-kube", false, "Skip kubectl context switching")
 	nonInteractive := fs.Bool("non-interactive", false, "Fail instead of prompting")
 	printEnv := fs.Bool("print-env", false, "Print export statements to stdout")
+	shellInit := fs.Bool("shell-init", false, "Print shell integration script")
 	versionFlag := fs.Bool("version", false, "Print version")
 	versionShort := fs.Bool("v", false, "Print version")
 
@@ -55,6 +56,7 @@ func parseArgs(args []string) (Args, error) {
 		NoKube:         *noKube,
 		NonInteractive: *nonInteractive,
 		PrintEnv:       *printEnv,
+		ShellInit:      *shellInit,
 		Version:        *versionFlag || *versionShort,
 	}, nil
 }
@@ -64,6 +66,7 @@ func printUsage(w io.Writer) {
 	_, _ = w.Write([]byte("       aws-login --account <id|name> --role <role>\n"))
 	_, _ = w.Write([]byte("       aws-login --alias <name>\n"))
 	_, _ = w.Write([]byte("       aws-login --print-env\n"))
+	_, _ = w.Write([]byte("       aws-login --shell-init\n"))
 	_, _ = w.Write([]byte("       aws-login --version\n"))
 }
 
@@ -88,6 +91,7 @@ func normalizeArgs(args []string) []string {
 		"--no-kube":         {},
 		"--non-interactive": {},
 		"--print-env":       {},
+		"--shell-init":      {},
 		"--version":         {},
 	}
 

@@ -54,6 +54,16 @@ func TestParseArgsInterspersedFlags(t *testing.T) {
 	}
 }
 
+func TestParseArgsShellInit(t *testing.T) {
+	args, err := parseArgs([]string{"--shell-init"})
+	if err != nil {
+		t.Fatalf("parseArgs error: %v", err)
+	}
+	if !args.ShellInit {
+		t.Fatalf("expected ShellInit=true")
+	}
+}
+
 func TestParseArgsShortVersion(t *testing.T) {
 	args, err := parseArgs([]string{"-v"})
 	if err != nil {

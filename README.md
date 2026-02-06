@@ -66,6 +66,17 @@ Print exports for the current shell:
 eval "$(aws-login --print-env)"
 ```
 
+## Shell Integration
+
+To make environment updates automatic, add the shell wrapper once:
+
+```bash
+eval "$(aws-login --shell-init)"
+```
+
+This defines an `aws-login` shell function that runs the binary and applies the exported AWS credentials to your current shell session.
+For non-bash shells, set `AWS_LOGIN_SHELL` to `fish` before running the command.
+
 ## Configuration
 
 `aws-login` reads optional config from `~/.aws-login.toml` (or `AWS_LOGIN_CONFIG`).

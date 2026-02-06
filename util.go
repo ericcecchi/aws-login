@@ -11,6 +11,43 @@ import (
 	"time"
 )
 
+func detectShell() string {
+	if override := strings.TrimSpace(os.Getenv("AWS_LOGIN_SHELL")); override != "" {
+		return strings.ToLower(override)
+	}
+	shell := strings.ToLower(filepath.Base(os.Getenv("SHELL")))
+	if shell == "" {
+		return "bash"
+	}
+	return shell
+}
+
+func shellInitScript(shell string) string {
+	switch shell {
+	case "fish":
+		return `function aws-login
+  set -l out (command aws-login --print-env $argv); or return $status
+  for line in $out
+    if test (string sub -l 7 $line) = "export "
+      set -l kv (string sub -s 8 $line)
+      set -l parts (string split -m 1 "=" $kv)
+      if test (count $parts) -ge 2
+        set -gx $parts[1] $parts[2]
+      end
+    end
+  end
+end
+`
+	default:
+		return `aws-login() {
+  local out
+  out="$(command aws-login --print-env "$@")" || return
+  eval "$out"
+}
+`
+	}
+}
+
 func logLine(w io.Writer, message string) {
 	fmt.Fprintln(w, message)
 }

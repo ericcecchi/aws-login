@@ -72,5 +72,6 @@ type Args struct {
 	NoKube         bool
 	NonInteractive bool
 	PrintEnv       bool
+	ShellInit      bool
 	Version        bool
 }

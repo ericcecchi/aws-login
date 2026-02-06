@@ -9,8 +9,8 @@ import (
 
 func TestStripNonDigits(t *testing.T) {
 	tests := []struct {
-		input  string
-		want   string
+		input string
+		want  string
 	}{{
 		input: "123-45-6789",
 		want:  "123456789",
@@ -121,5 +121,25 @@ func TestRunIdentityCheck(t *testing.T) {
 	}
 	if !strings.Contains(output, "UserId: abc") {
 		t.Fatalf("expected UserId in output, got %q", output)
+	}
+}
+
+func TestShellInitScriptDefault(t *testing.T) {
+	script := shellInitScript("bash")
+	if !strings.Contains(script, "aws-login()") {
+		t.Fatalf("expected bash shell function")
+	}
+	if !strings.Contains(script, "command aws-login --print-env") {
+		t.Fatalf("expected print-env invocation")
+	}
+}
+
+func TestShellInitScriptFish(t *testing.T) {
+	script := shellInitScript("fish")
+	if !strings.Contains(script, "function aws-login") {
+		t.Fatalf("expected fish function")
+	}
+	if !strings.Contains(script, "set -gx") {
+		t.Fatalf("expected fish env export")
 	}
 }
