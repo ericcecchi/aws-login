@@ -135,6 +135,7 @@ If `~/.aws/config` is missing or no SSO sessions are configured, the tool will:
 
 ```bash
 go build .
+go test ./...
 ```
 
 ## Conventional Commits

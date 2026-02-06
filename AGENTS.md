@@ -9,7 +9,8 @@
 - Install to GOBIN/GOPATH: `make install`
 
 ## Tests
-There are no automated tests in this repo at the moment.
+Run: `go test ./...`
+Tests use stubbed `aws` and `kubectl` binaries in temp PATHs to avoid real AWS calls.
 
 ## Release Workflow (Semantic Versioning)
 - Releases are created automatically on every push to `main`.
