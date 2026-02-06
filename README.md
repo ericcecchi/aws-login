@@ -21,7 +21,7 @@
 From GitHub:
 
 ```bash
-go install github.com/ericcecchi/aws-login/cmd/aws-login@latest
+go install github.com/ericcecchi/aws-login@latest
 ```
 
 If the repo is private, set:
@@ -34,7 +34,7 @@ From a local clone:
 
 ```bash
 cd ~/Projects/aws-login
-go install ./cmd/aws-login
+go install .
 ```
 
 The binary is installed into `GOBIN` or `GOPATH/bin`.
@@ -134,7 +134,7 @@ If `~/.aws/config` is missing or no SSO sessions are configured, the tool will:
 ## Development
 
 ```bash
-go build ./cmd/aws-login
+go build .
 ```
 
 ## License
