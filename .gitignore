@@ -1,0 +1,4 @@
+.aws-login.binary
+.bin.tmp/
+/bin/
+/aws-login
