@@ -1,0 +1,15 @@
+{
+  "plugins": {
+    "files-updater": {
+      "names": []
+    },
+    "hooks": {
+      "names": [
+        "exec"
+      ],
+      "options": {
+        "exec_on_success": "./scripts/update-version.sh {{.NewRelease.Version}}"
+      }
+    }
+  }
+}
