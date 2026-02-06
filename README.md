@@ -1,28 +1,22 @@
 # aws-login
 
-AWS SSO helper to discover accessible accounts and roles, then export credentials for the current shell.
+`aws-login` is a fast, zero-config AWS SSO helper that discovers every account and role you can access, then exports short‑lived credentials for your current shell. It also auto‑configures Kubernetes contexts for EKS so you can start working immediately.
 
-## Usage
+## Highlights
 
-```bash
-aws-login                 # interactive account + role selection
-aws-login dev             # use alias from ~/.aws-login.toml
-aws-login dev developer   # alias + role override
-aws-login --account 123456789012 --role admin
-aws-login --sso-session perch
-```
+- Interactive fuzzy selection for accounts and roles.
+- Automatic onboarding if you have never run `aws configure sso`.
+- Writes a short‑lived AWS profile per account/role for easy `--profile` use.
+- Auto‑discovers EKS clusters and switches kube context.
+- No extra system dependencies.
+
+## Requirements
+
+- AWS CLI v2 (`aws`) with SSO support.
+- `kubectl` for Kubernetes context automation.
+- Go 1.21+ for building from source.
 
 ## Install
-
-From this repo:
-
-```bash
-cd ~/Projects/aws-login
-go install ./cmd/aws-login
-```
-
-The binary will be installed into `GOBIN` or `GOPATH/bin`.
-You can also run `make install`.
 
 From GitHub:
 
@@ -30,23 +24,119 @@ From GitHub:
 go install github.com/ericcecchi/aws-login/cmd/aws-login@latest
 ```
 
-If the repo is private, set `GOPRIVATE=github.com/ericcecchi/*` and ensure your
-GitHub auth is configured.
+If the repo is private, set:
+
+```bash
+export GOPRIVATE=github.com/ericcecchi/*
+```
+
+From a local clone:
+
+```bash
+cd ~/Projects/aws-login
+go install ./cmd/aws-login
+```
+
+The binary is installed into `GOBIN` or `GOPATH/bin`.
+
+## Quickstart
+
+Interactive login with fuzzy selection:
+
+```bash
+aws-login
+```
+
+Pick a specific account/role:
+
+```bash
+aws-login --account 123456789012 --role admin
+```
+
+Use a named alias from `~/.aws-login.toml`:
+
+```bash
+aws-login dev
+aws-login dev developer
+```
+
+Print exports for the current shell:
+
+```bash
+eval "$(aws-login --print-env)"
+```
 
 ## Configuration
 
-The CLI reads optional config from `~/.aws-login.toml` (or `AWS_LOGIN_CONFIG`).
-If it doesn't exist yet, the CLI will create a minimal config automatically.
-Copy `config_sample.toml` from this package as a starting point to define
-aliases, default role mappings, and regions. Kube context is now automatic.
-Each login also writes a short-lived AWS profile named
-`aws-login-<account>-<role>` into `~/.aws/config` and `~/.aws/credentials`.
+`aws-login` reads optional config from `~/.aws-login.toml` (or `AWS_LOGIN_CONFIG`).
+If the file does not exist, a minimal config is created automatically.
 
-Selections use fuzzy search via a built-in terminal picker (no extra system packages).
+Start with `config_sample.toml` to define aliases and defaults.
+
+Example:
+
+```toml
+[defaults]
+sso_session = "my-sso"
+
+[aliases.dev]
+account_id = "123456789012"
+default_role = "admin"
+roles = ["admin", "read"]
+region = "us-east-1"
+```
+
+## Profiles
+
+Each login writes a short‑lived AWS profile named:
+
+`aws-login-<account>-<role>`
+
+These are saved into:
+
+- `~/.aws/config`
+- `~/.aws/credentials`
+
+You can then use:
+
+```bash
+aws s3 ls --profile aws-login-myaccount-admin
+```
 
 ## Kubernetes
 
-When you log in, the tool will:
-- Discover EKS clusters in the selected account.
-- Update your kubeconfig for those clusters.
-- List contexts that match the account and switch to the first one found.
+On successful login, the tool:
+
+- Lists EKS clusters for the selected account.
+- Runs `aws eks update-kubeconfig` for each cluster.
+- Lists matching kube contexts and switches to the first match.
+
+If you want to skip Kubernetes setup:
+
+```bash
+aws-login --no-kube
+```
+
+## Onboarding Flow
+
+If `~/.aws/config` is missing or no SSO sessions are configured, the tool will:
+
+- Create the AWS config file if needed.
+- Launch `aws configure sso`.
+- Continue login once the SSO session exists.
+
+## Troubleshooting
+
+- **No TTY available**: Use `--account` and `--role` or `--non-interactive`.
+- **No SSO sessions found**: Run `aws configure sso` and try again.
+- **No EKS clusters**: The tool will skip kube context switching.
+
+## Development
+
+```bash
+go build ./cmd/aws-login
+```
+
+## License
+
+MIT. See `License`.
