@@ -1,20 +1,18 @@
 package main
 
 import (
+	"errors"
 	"fmt"
-	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
 
-	"github.com/BurntSushi/toml"
 	"gopkg.in/ini.v1"
 )
 
 const (
-	defaultConfigPath = "~/.aws-login.toml"
-	awsConfigPath     = "~/.aws/config"
+	awsConfigPath = "~/.aws/config"
 )
 
 func loadAWSConfig() (*ini.File, error) {
@@ -29,83 +27,64 @@ func loadAWSConfig() (*ini.File, error) {
 	}
 	cfg, err := ini.Load(path)
 	if err != nil {
+		restored, restoreErr := tryRestoreAWSConfig(path)
+		if restoreErr == nil && restored {
+			cfg, err = ini.Load(path)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("unable to read %s", path)
+		}
+	}
+	if err := validateAWSConfigFile(path); err != nil {
+		restored, restoreErr := tryRestoreAWSConfig(path)
+		if restoreErr == nil && restored {
+			cfg, err = ini.Load(path)
+			if err == nil {
+				if validateErr := validateAWSConfigFile(path); validateErr == nil {
+					return cfg, nil
+				}
+			}
+		}
 		return nil, fmt.Errorf("unable to read %s", path)
 	}
 	return cfg, nil
 }
 
-func loadAWSCredentials() (*ini.File, string, error) {
-	path := expandPath(awsCredentialsPath)
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-			return nil, "", fmt.Errorf("unable to create %s", path)
-		}
-		if err := os.WriteFile(path, []byte{}, 0o600); err != nil {
-			return nil, "", fmt.Errorf("unable to create %s", path)
-		}
+func tryRestoreAWSConfig(configPath string) (bool, error) {
+	backupPath := expandPath(awsConfigBackupPath)
+	if _, err := os.Stat(backupPath); err != nil {
+		return false, err
 	}
-	cfg, err := ini.Load(path)
+	if err := restoreFromBackup(configPath, backupPath); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func validateAWSConfigFile(path string) error {
+	if _, err := os.Stat(path); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return err
+	}
+	if _, err := ini.Load(path); err != nil {
+		return fmt.Errorf("unable to parse AWS config")
+	}
+	if !commandExists("aws") {
+		return nil
+	}
+	cmd := exec.Command("aws", "configure", "list-profiles")
+	cmd.Env = append(os.Environ(), "AWS_CONFIG_FILE="+path)
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return nil, "", fmt.Errorf("unable to read %s", path)
-	}
-	return cfg, path, nil
-}
-
-func loadUserConfig(path string) (Config, error) {
-	cfg := Config{Aliases: map[string]AliasConfig{}}
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return cfg, nil
-	}
-	if _, err := toml.DecodeFile(path, &cfg); err != nil {
-		return cfg, fmt.Errorf("failed to read %s: %w", path, err)
-	}
-	if cfg.Aliases == nil {
-		cfg.Aliases = map[string]AliasConfig{}
-	}
-	return cfg, nil
-}
-
-func maybeBootstrapConfig(path string, awsCfg *ini.File, w io.Writer) {
-	if _, err := os.Stat(path); err == nil {
-		return
-	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		logLine(w, fmt.Sprintf("Warning: failed to create config directory: %v", err))
-		return
-	}
-
-	sessions := listSSOSessions(awsCfg)
-	defaultSession := ""
-	if len(sessions) == 1 {
-		for name := range sessions {
-			defaultSession = name
+		message := strings.TrimSpace(string(output))
+		if message == "" {
+			message = "aws cli could not parse config"
 		}
+		return fmt.Errorf(message)
 	}
-
-	lines := []string{
-		"# aws-login configuration",
-		"",
-		"[defaults]",
-	}
-	if defaultSession != "" {
-		lines = append(lines, fmt.Sprintf("sso_session = \"%s\"", defaultSession))
-	} else {
-		lines = append(lines, "# sso_session = \"my-session\"")
-	}
-	lines = append(lines,
-		"",
-		"# Define aliases to map friendly names to account IDs and roles.",
-		"# [aliases.dev]",
-		"# account_id = \"123456789012\"",
-		"# default_role = \"admin\"",
-		"# roles = [\"admin\", \"read\"]",
-	)
-
-	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0o644); err != nil {
-		logLine(w, fmt.Sprintf("Warning: failed to create config at %s: %v", path, err))
-		return
-	}
-	logLine(w, fmt.Sprintf("Created default config at %s", path))
+	return nil
 }
 
 func listSSOSessions(cfg *ini.File) map[string]SessionInfo {
@@ -125,19 +104,10 @@ func listSSOSessions(cfg *ini.File) map[string]SessionInfo {
 	return out
 }
 
-func listProfiles(cfg *ini.File) []string {
-	profiles := []string{}
-	for _, section := range cfg.Sections() {
-		name := section.Name()
-		if strings.HasPrefix(name, "profile ") {
-			profiles = append(profiles, strings.TrimSpace(strings.TrimPrefix(name, "profile ")))
-		}
+func getProfileInfoIfExists(cfg *ini.File, profile string) (ProfileInfo, bool, error) {
+	if strings.TrimSpace(profile) == "" {
+		return ProfileInfo{}, false, nil
 	}
-	sort.Strings(profiles)
-	return profiles
-}
-
-func getProfileInfo(cfg *ini.File, profile string) (ProfileInfo, error) {
 	sectionName := "profile " + profile
 	section, err := cfg.GetSection(sectionName)
 	if err != nil {
@@ -146,9 +116,8 @@ func getProfileInfo(cfg *ini.File, profile string) (ProfileInfo, error) {
 		}
 	}
 	if err != nil {
-		return ProfileInfo{}, fmt.Errorf("profile '%s' not found", profile)
+		return ProfileInfo{}, false, nil
 	}
-
 	return ProfileInfo{
 		SSOSession: section.Key("sso_session").String(),
 		SSOStart:   section.Key("sso_start_url").String(),
@@ -156,35 +125,6 @@ func getProfileInfo(cfg *ini.File, profile string) (ProfileInfo, error) {
 		Region:     section.Key("region").String(),
 		AccountID:  section.Key("sso_account_id").String(),
 		RoleName:   section.Key("sso_role_name").String(),
-	}, nil
-}
-
-func resolveAlias(alias AliasConfig, roleOverride string) (string, string, string, string, string, error) {
-	if alias.AccountID == "" {
-		return "", "", "", "", "", fmt.Errorf("alias is missing account_id")
-	}
-	role := roleOverride
-	if role == "" {
-		role = alias.DefaultRole
-	}
-	if role == "" {
-		return "", "", "", "", "", fmt.Errorf("alias does not define a role")
-	}
-	if len(alias.Roles) > 0 {
-		allowed := false
-		for _, r := range alias.Roles {
-			if r == role {
-				allowed = true
-				break
-			}
-		}
-		if !allowed {
-			return "", "", "", "", "", fmt.Errorf("role '%s' is not allowed for alias", role)
-		}
-	}
-	profile := ""
-	if alias.ProfileByRole != nil {
-		profile = alias.ProfileByRole[role]
-	}
-	return alias.AccountID, role, profile, alias.KubeContext, alias.Region, nil
+		EKSRoleARN: section.Key("eks_role_arn").String(),
+	}, true, nil
 }

@@ -43,7 +43,7 @@ func TestMaybeSwitchKubeAuto(t *testing.T) {
 	t.Setenv("AWS_LOGIN_TEST_EKS_JSON", `{"clusters":["cluster-a","cluster-b"]}`)
 
 	buf := &bytes.Buffer{}
-	maybeSwitchKubeAuto("123", "us-east-1", "", map[string]string{"AWS_REGION": "us-east-1"}, buf)
+	maybeSwitchKubeAuto("123", "us-east-1", "", "test-profile", "", buf)
 
 	data, err := os.ReadFile(useContextFile)
 	if err != nil {

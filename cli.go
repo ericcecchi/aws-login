@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -13,11 +14,11 @@ func parseArgs(args []string) (Args, error) {
 
 	accountFlag := fs.String("account", "", "Account name or ID")
 	roleFlag := fs.String("role", "", "Role name")
-	aliasFlag := fs.String("alias", "", "Alias defined in config")
 	profileFlag := fs.String("profile", "", "AWS profile to use")
 	ssoSessionFlag := fs.String("sso-session", "", "AWS SSO session name")
-	regionFlag := fs.String("region", "", "AWS region to export")
+	regionFlag := fs.String("region", "", "AWS region to use")
 	kubeContextFlag := fs.String("kube-context", "", "kubectl context to switch to")
+	doctorFlag := fs.Bool("doctor", false, "Validate and repair AWS/Kubernetes config files")
 	noKube := fs.Bool("no-kube", false, "Skip kubectl context switching")
 	nonInteractive := fs.Bool("non-interactive", false, "Fail instead of prompting")
 	printEnv := fs.Bool("print-env", false, "Print export statements to stdout")
@@ -30,29 +31,27 @@ func parseArgs(args []string) (Args, error) {
 	}
 
 	positional := fs.Args()
-	var target, roleArg string
-	if len(positional) > 0 {
+	var target string
+	doctorPositional := len(positional) > 0 && positional[0] == "doctor"
+	if doctorPositional && len(positional) > 1 {
+		return Args{}, fmt.Errorf("doctor command does not accept positional arguments")
+	}
+	if len(positional) > 0 && !doctorPositional {
 		target = positional[0]
 	}
 	if len(positional) > 1 {
-		roleArg = positional[1]
-	}
-
-	role := *roleFlag
-	if role == "" {
-		role = roleArg
+		return Args{}, fmt.Errorf("too many positional arguments; use --account and --role")
 	}
 
 	return Args{
 		Target:         target,
-		Role:           role,
+		Role:           *roleFlag,
 		Account:        *accountFlag,
-		RoleFlag:       *roleFlag,
-		Alias:          *aliasFlag,
 		Profile:        *profileFlag,
 		SSOSession:     *ssoSessionFlag,
 		Region:         *regionFlag,
 		KubeContext:    *kubeContextFlag,
+		Doctor:         *doctorFlag || doctorPositional,
 		NoKube:         *noKube,
 		NonInteractive: *nonInteractive,
 		PrintEnv:       *printEnv,
@@ -62,9 +61,10 @@ func parseArgs(args []string) (Args, error) {
 }
 
 func printUsage(w io.Writer) {
-	_, _ = w.Write([]byte("Usage: aws-login [target] [role]\n"))
+	_, _ = w.Write([]byte("Usage: aws-login [profile]\n"))
 	_, _ = w.Write([]byte("       aws-login --account <id|name> --role <role>\n"))
-	_, _ = w.Write([]byte("       aws-login --alias <name>\n"))
+	_, _ = w.Write([]byte("       aws-login --profile <name>\n"))
+	_, _ = w.Write([]byte("       aws-login doctor\n"))
 	_, _ = w.Write([]byte("       aws-login --print-env\n"))
 	_, _ = w.Write([]byte("       aws-login --shell-init\n"))
 	_, _ = w.Write([]byte("       aws-login --version\n"))
@@ -81,7 +81,6 @@ func normalizeArgs(args []string) []string {
 	flagWithValue := map[string]struct{}{
 		"--account":      {},
 		"--role":         {},
-		"--alias":        {},
 		"--profile":      {},
 		"--sso-session":  {},
 		"--region":       {},
@@ -91,6 +90,7 @@ func normalizeArgs(args []string) []string {
 		"--no-kube":         {},
 		"--non-interactive": {},
 		"--print-env":       {},
+		"--doctor":          {},
 		"--shell-init":      {},
 		"--version":         {},
 	}

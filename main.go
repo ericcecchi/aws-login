@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 )
 
 func main() {
@@ -24,6 +23,18 @@ func main() {
 		return
 	}
 
+	if args.Doctor {
+		doctorWriter := os.Stdout
+		if args.PrintEnv {
+			doctorWriter = os.Stderr
+		}
+		if err := runDoctor(doctorWriter); err != nil {
+			logLine(os.Stderr, fmt.Sprintf("Doctor failed: %v", err))
+			os.Exit(1)
+		}
+		return
+	}
+
 	writer := logWriter(args.PrintEnv)
 
 	if !commandExists("aws") {
@@ -31,63 +42,43 @@ func main() {
 		os.Exit(1)
 	}
 
-	configPath := os.Getenv("AWS_LOGIN_CONFIG")
-	if configPath == "" {
-		configPath = defaultConfigPath
-	}
-	configPath = expandPath(configPath)
-
 	awsConfig, err := loadAWSConfig()
 	if err != nil {
 		logLine(writer, fmt.Sprintf("Error: %v", err))
 		os.Exit(1)
 	}
 
-	maybeBootstrapConfig(configPath, awsConfig, writer)
-	userConfig, err := loadUserConfig(configPath)
+	selectedAccount := strings.TrimSpace(args.Account)
+	selectedRole := strings.TrimSpace(args.Role)
+	kubeContext := strings.TrimSpace(args.KubeContext)
+	regionOverride := strings.TrimSpace(args.Region)
+	profileName, err := resolveRequestedProfile(args)
 	if err != nil {
 		logLine(writer, fmt.Sprintf("Error: %v", err))
 		os.Exit(1)
 	}
 
-	aliasName := strings.TrimSpace(args.Alias)
-	if aliasName == "" && args.Target != "" {
-		if _, ok := userConfig.Aliases[args.Target]; ok {
-			aliasName = args.Target
-			args.Target = ""
-		}
-	}
-
-	aliasConfig, hasAlias := userConfig.Aliases[aliasName]
-	if aliasName != "" && !hasAlias {
-		logLine(writer, fmt.Sprintf("Error: alias '%s' not found", aliasName))
-		os.Exit(1)
-	}
-
-	selectedAccount := strings.TrimSpace(args.Account)
-	if selectedAccount == "" {
-		selectedAccount = strings.TrimSpace(args.Target)
-	}
-	selectedRole := strings.TrimSpace(args.Role)
-
-	var profileName string
-	kubeContext := strings.TrimSpace(args.KubeContext)
-	regionOverride := strings.TrimSpace(args.Region)
-
-	if hasAlias {
-		aliasAccount, aliasRole, aliasProfile, aliasKube, aliasRegion, err := resolveAlias(aliasConfig, selectedRole)
+	profileInfo := ProfileInfo{}
+	profileFound := false
+	if profileName != "" {
+		info, found, err := getProfileInfoIfExists(awsConfig, profileName)
 		if err != nil {
 			logLine(writer, fmt.Sprintf("Error: %v", err))
 			os.Exit(1)
 		}
-		selectedAccount = aliasAccount
-		selectedRole = aliasRole
-		profileName = aliasProfile
-		if kubeContext == "" {
-			kubeContext = aliasKube
+		profileInfo = info
+		profileFound = found
+		if !found {
+			logLine(writer, fmt.Sprintf("ℹ️  Profile '%s' not found; will create it", profileName))
 		}
-		if regionOverride == "" {
-			regionOverride = aliasRegion
+	}
+
+	if profileFound {
+		if selectedAccount == "" && profileInfo.AccountID != "" {
+			selectedAccount = profileInfo.AccountID
+		}
+		if selectedRole == "" && profileInfo.RoleName != "" {
+			selectedRole = profileInfo.RoleName
 		}
 	}
 
@@ -96,7 +87,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	session, err := resolveSession(awsConfig, userConfig, writer, args.SSOSession, args.Profile, args.NonInteractive)
+	session, err := resolveSession(awsConfig, writer, args.SSOSession, profileName, args.NonInteractive)
+	if err != nil {
+		logLine(writer, fmt.Sprintf("Error: %v", err))
+		os.Exit(1)
+	}
+	session, err = ensureReusableSSOSession(awsConfig, session)
 	if err != nil {
 		logLine(writer, fmt.Sprintf("Error: %v", err))
 		os.Exit(1)
@@ -108,7 +104,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	accounts, err := listAccounts(accessToken, session.Region)
+	cacheKey := sessionCacheKey(session)
+	accounts, err := listAccountsCached(accessToken, session.Region, cacheKey)
 	if err != nil {
 		logLine(writer, fmt.Sprintf("Error: %v", err))
 		os.Exit(1)
@@ -120,32 +117,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	roles, err := listRoles(accessToken, session.Region, account.AccountID)
+	roles, err := listRolesCached(accessToken, session.Region, account.AccountID, cacheKey)
 	if err != nil {
 		logLine(writer, fmt.Sprintf("Error: %v", err))
 		os.Exit(1)
 	}
 
 	role, err := resolveRole(roles, selectedRole, writer, args.NonInteractive)
-	if err != nil {
-		logLine(writer, fmt.Sprintf("Error: %v", err))
-		os.Exit(1)
-	}
-
-	profileInfo := ProfileInfo{}
-	if args.Profile != "" {
-		info, err := getProfileInfo(awsConfig, args.Profile)
-		if err != nil {
-			logLine(writer, fmt.Sprintf("Error: %v", err))
-			os.Exit(1)
-		}
-		profileInfo = info
-		if profileName == "" && info.AccountID == account.AccountID && info.RoleName == role.RoleName {
-			profileName = args.Profile
-		}
-	}
-
-	creds, err := getRoleCredentials(accessToken, session.Region, account.AccountID, role.RoleName)
 	if err != nil {
 		logLine(writer, fmt.Sprintf("Error: %v", err))
 		os.Exit(1)
@@ -162,35 +140,45 @@ func main() {
 	if profileName == "" {
 		profileName = buildProfileName(account, role)
 	}
-	if err := writeProfile(profileName, region, creds); err != nil {
-		logLine(writer, fmt.Sprintf("Warning: failed to write AWS profile: %v", err))
-	} else {
-		logLine(writer, fmt.Sprintf("✓ Wrote AWS profile %s", profileName))
-	}
 
+	if err := withMutationGuard(!args.NoKube, func() error {
+		if err := configureProfile(profileName, region, session, account.AccountID, role.RoleName); err != nil {
+			return err
+		}
+		if !args.NoKube {
+			maybeSwitchKubeAuto(account.AccountID, region, kubeContext, profileName, profileInfo.EKSRoleARN, writer)
+		}
+		return nil
+	}); err != nil {
+		logLine(writer, fmt.Sprintf("Error: %v", err))
+		os.Exit(1)
+	}
+	logLine(writer, fmt.Sprintf("✓ Configured AWS profile %s", profileName))
 	logLine(writer, fmt.Sprintf("✅ Ready for %s (%s) as %s", account.AccountName, account.AccountID, role.RoleName))
 
-	envVars := map[string]string{
-		"AWS_REGION":            region,
-		"AWS_DEFAULT_REGION":    region,
-		"AWS_ACCESS_KEY_ID":     creds.AccessKeyID,
-		"AWS_SECRET_ACCESS_KEY": creds.SecretAccessKey,
-		"AWS_SESSION_TOKEN":     creds.SessionToken,
-	}
-	if creds.Expiration != nil {
-		envVars["AWS_SESSION_EXPIRATION"] = creds.Expiration.Local().Format(time.RFC3339)
-	}
-	if profileName != "" {
-		envVars["AWS_PROFILE"] = profileName
-	}
-
-	if !args.NoKube {
-		maybeSwitchKubeAuto(account.AccountID, region, kubeContext, envVars, writer)
-	}
-
-	runIdentityCheck(envVars, writer)
+	runIdentityCheck(profileName, region, writer)
 
 	if args.PrintEnv {
+		creds, err := getRoleCredentials(accessToken, session.Region, account.AccountID, role.RoleName)
+		if err != nil {
+			logLine(writer, fmt.Sprintf("Error: %v", err))
+			os.Exit(1)
+		}
 		fmt.Print(formatExports(creds, region, profileName))
 	}
+}
+
+func resolveRequestedProfile(args Args) (string, error) {
+	profileName := strings.TrimSpace(args.Profile)
+	targetProfile := strings.TrimSpace(args.Target)
+	if profileName != "" && targetProfile != "" && profileName != targetProfile {
+		return "", fmt.Errorf("positional profile and --profile do not match")
+	}
+	if profileName == "" {
+		profileName = targetProfile
+	}
+	if profileName != "" {
+		return profileName, nil
+	}
+	return "", nil
 }

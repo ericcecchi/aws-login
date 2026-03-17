@@ -3,7 +3,6 @@ module github.com/ericcecchi/aws-login
 go 1.21
 
 require (
-	github.com/BurntSushi/toml v1.4.0
 	github.com/ktr0731/go-fuzzyfinder v0.8.0
 	golang.org/x/term v0.18.0
 	gopkg.in/ini.v1 v1.67.0
