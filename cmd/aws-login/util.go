@@ -26,6 +26,13 @@ func shellInitScript(shell string) string {
 	switch shell {
 	case "fish":
 		return `function aws-login
+  if test (count $argv) -gt 0
+    switch $argv[1]
+      case doctor --doctor --version -v --shell-init -h --help
+        command aws-login $argv
+        return $status
+    end
+  end
   set -l out (command aws-login --print-env $argv); or return $status
   for line in $out
     if test (string sub -l 7 $line) = "export "
@@ -40,6 +47,14 @@ end
 `
 	default:
 		return `aws-login() {
+  if [ "$#" -gt 0 ]; then
+    case "$1" in
+      doctor|--doctor|--version|-v|--shell-init|-h|--help)
+        command aws-login "$@"
+        return
+        ;;
+    esac
+  fi
   local out
   out="$(command aws-login --print-env "$@")" || return
   eval "$out"
@@ -77,24 +92,6 @@ func stripNonDigits(input string) string {
 	return b.String()
 }
 
-func mergeEnv(overrides map[string]string) []string {
-	envMap := map[string]string{}
-	for _, entry := range os.Environ() {
-		parts := strings.SplitN(entry, "=", 2)
-		if len(parts) == 2 {
-			envMap[parts[0]] = parts[1]
-		}
-	}
-	for key, value := range overrides {
-		envMap[key] = value
-	}
-	merged := make([]string, 0, len(envMap))
-	for key, value := range envMap {
-		merged = append(merged, fmt.Sprintf("%s=%s", key, value))
-	}
-	return merged
-}
-
 func formatExports(creds RoleCredentials, region, profile string) string {
 	lines := []string{}
 	if profile != "" {
@@ -121,9 +118,15 @@ func shellQuote(value string) string {
 	return "'" + strings.ReplaceAll(value, "'", "'\\''") + "'"
 }
 
-func runIdentityCheck(envVars map[string]string, w io.Writer) {
-	cmd := exec.Command("aws", "sts", "get-caller-identity", "--output", "json")
-	cmd.Env = mergeEnv(envVars)
+func runIdentityCheck(profileName, region string, w io.Writer) {
+	args := []string{"sts", "get-caller-identity", "--output", "json"}
+	if region != "" {
+		args = append(args, "--region", region)
+	}
+	if profileName != "" {
+		args = append(args, "--profile", profileName)
+	}
+	cmd := exec.Command("aws", args...)
 	output, err := cmd.Output()
 	if err != nil {
 		logLine(w, "Could not retrieve identity")

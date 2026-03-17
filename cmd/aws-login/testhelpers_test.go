@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"testing"
 )
 
@@ -33,26 +32,21 @@ func writeStubScripts(t *testing.T, scripts map[string]string) string {
 	return dir
 }
 
-func mapFromEnvList(entries []string) map[string]string {
-	out := make(map[string]string, len(entries))
-	for _, entry := range entries {
-		parts := strings.SplitN(entry, "=", 2)
-		if len(parts) == 2 {
-			out[parts[0]] = parts[1]
-		}
-	}
-	return out
-}
-
 const awsStubScript = "#!/usr/bin/env bash\n" +
 	"set -e\n" +
 	"cmd=\"${1:-}\"\n" +
 	"sub=\"${2:-}\"\n" +
 	"if [[ \"$cmd\" == \"sso\" && \"$sub\" == \"list-accounts\" ]]; then\n" +
+	"  if [[ -n \"${AWS_LOGIN_TEST_ACCOUNTS_CALLS_FILE:-}\" ]]; then\n" +
+	"    echo 1 >> \"$AWS_LOGIN_TEST_ACCOUNTS_CALLS_FILE\"\n" +
+	"  fi\n" +
 	"  printf '%s' \"${AWS_LOGIN_TEST_ACCOUNTS_JSON}\"\n" +
 	"  exit 0\n" +
 	"fi\n" +
 	"if [[ \"$cmd\" == \"sso\" && \"$sub\" == \"list-account-roles\" ]]; then\n" +
+	"  if [[ -n \"${AWS_LOGIN_TEST_ROLES_CALLS_FILE:-}\" ]]; then\n" +
+	"    echo 1 >> \"$AWS_LOGIN_TEST_ROLES_CALLS_FILE\"\n" +
+	"  fi\n" +
 	"  printf '%s' \"${AWS_LOGIN_TEST_ROLES_JSON}\"\n" +
 	"  exit 0\n" +
 	"fi\n" +
@@ -81,6 +75,12 @@ const awsStubScript = "#!/usr/bin/env bash\n" +
 	"  exit 0\n" +
 	"fi\n" +
 	"if [[ \"$cmd\" == \"configure\" && \"$sub\" == \"sso\" ]]; then\n" +
+	"  exit 0\n" +
+	"fi\n" +
+	"if [[ \"$cmd\" == \"configure\" && \"$sub\" == \"set\" ]]; then\n" +
+	"  if [[ -n \"${AWS_LOGIN_TEST_CONFIGURE_SET_FILE:-}\" ]]; then\n" +
+	"    echo \"${3}=${4}\" >> \"$AWS_LOGIN_TEST_CONFIGURE_SET_FILE\"\n" +
+	"  fi\n" +
 	"  exit 0\n" +
 	"fi\n" +
 	"echo \"unexpected aws args: $*\" >&2\n" +

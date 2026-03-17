@@ -15,19 +15,14 @@ import (
 	"gopkg.in/ini.v1"
 )
 
-func resolveSession(cfg *ini.File, userConfig Config, w io.Writer, ssoSessionFlag, profileFlag string, nonInteractive bool) (SessionInfo, error) {
+func resolveSession(cfg *ini.File, w io.Writer, ssoSessionFlag, profileFlag string, nonInteractive bool) (SessionInfo, error) {
 	cfg = ensureSSOConfigured(cfg, w, nonInteractive)
 	if cfg == nil {
 		return SessionInfo{}, fmt.Errorf("no AWS SSO sessions found; run 'aws configure sso'")
 	}
 
 	sessions := listSSOSessions(cfg)
-	defaultSession := userConfig.Defaults.SSOSession
-
-	profileChoice := profileFlag
-	if profileChoice == "" {
-		profileChoice = os.Getenv("AWS_PROFILE")
-	}
+	profileChoice := strings.TrimSpace(profileFlag)
 
 	if ssoSessionFlag != "" {
 		session, ok := sessions[ssoSessionFlag]
@@ -39,34 +34,53 @@ func resolveSession(cfg *ini.File, userConfig Config, w io.Writer, ssoSessionFla
 	}
 
 	if profileChoice != "" {
-		info, err := getProfileInfo(cfg, profileChoice)
+		info, found, err := getProfileInfoIfExists(cfg, profileChoice)
 		if err != nil {
 			return SessionInfo{}, err
 		}
-		if info.SSOSession != "" {
-			session, ok := sessions[info.SSOSession]
-			if !ok {
-				return SessionInfo{}, fmt.Errorf("SSO session '%s' not found for profile '%s'", info.SSOSession, profileChoice)
+		if found {
+			if info.SSOSession != "" {
+				session, ok := sessions[info.SSOSession]
+				if !ok {
+					return SessionInfo{}, fmt.Errorf("SSO session '%s' not found for profile '%s'", info.SSOSession, profileChoice)
+				}
+				session.Name = info.SSOSession
+				session.LoginArgs = []string{"--sso-session", info.SSOSession}
+				return session, nil
 			}
-			session.LoginArgs = []string{"--sso-session", info.SSOSession}
-			return session, nil
+			if info.SSOStart != "" && info.SSORegion != "" {
+				return SessionInfo{
+					Name:      "",
+					StartURL:  info.SSOStart,
+					Region:    info.SSORegion,
+					LoginArgs: []string{"--profile", profileChoice},
+				}, nil
+			}
+			return SessionInfo{}, fmt.Errorf("profile '%s' is not an SSO profile", profileChoice)
 		}
-		if info.SSOStart != "" && info.SSORegion != "" {
-			return SessionInfo{
-				Name:      "",
-				StartURL:  info.SSOStart,
-				Region:    info.SSORegion,
-				LoginArgs: []string{"--profile", profileChoice},
-			}, nil
-		}
-		return SessionInfo{}, fmt.Errorf("profile '%s' is not an SSO profile", profileChoice)
 	}
 
-	if defaultSession != "" {
-		session, ok := sessions[defaultSession]
-		if ok {
-			session.LoginArgs = []string{"--sso-session", defaultSession}
+	defaultInfo, found, err := getProfileInfoIfExists(cfg, "default")
+	if err != nil {
+		return SessionInfo{}, err
+	}
+	if found {
+		if defaultInfo.SSOSession != "" {
+			session, ok := sessions[defaultInfo.SSOSession]
+			if !ok {
+				return SessionInfo{}, fmt.Errorf("SSO session '%s' not found for profile 'default'", defaultInfo.SSOSession)
+			}
+			session.Name = defaultInfo.SSOSession
+			session.LoginArgs = []string{"--sso-session", defaultInfo.SSOSession}
 			return session, nil
+		}
+		if defaultInfo.SSOStart != "" && defaultInfo.SSORegion != "" {
+			return SessionInfo{
+				Name:      "",
+				StartURL:  defaultInfo.SSOStart,
+				Region:    defaultInfo.SSORegion,
+				LoginArgs: []string{"--profile", "default"},
+			}, nil
 		}
 	}
 

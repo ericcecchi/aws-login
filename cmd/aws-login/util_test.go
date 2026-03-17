@@ -81,23 +81,6 @@ func TestFormatExports(t *testing.T) {
 	}
 }
 
-func TestMergeEnvOverrides(t *testing.T) {
-	setTempHome(t)
-	t.Setenv("FOO", "old")
-	t.Setenv("BAR", "keep")
-	merged := mergeEnv(map[string]string{"FOO": "new", "BAZ": "1"})
-	m := mapFromEnvList(merged)
-	if m["FOO"] != "new" {
-		t.Fatalf("expected FOO to be overridden, got %q", m["FOO"])
-	}
-	if m["BAR"] != "keep" {
-		t.Fatalf("expected BAR to be preserved, got %q", m["BAR"])
-	}
-	if m["BAZ"] != "1" {
-		t.Fatalf("expected BAZ to be set, got %q", m["BAZ"])
-	}
-}
-
 func TestExpandPath(t *testing.T) {
 	home := setTempHome(t)
 	input := "~/.aws/config"
@@ -114,7 +97,7 @@ func TestRunIdentityCheck(t *testing.T) {
 	writeStubScripts(t, map[string]string{"aws": awsStubScript})
 	t.Setenv("AWS_LOGIN_TEST_IDENTITY_JSON", `{"UserId":"abc","Account":"123","Arn":"arn:aws:sts::123:assumed-role"}`)
 	buf := &bytes.Buffer{}
-	runIdentityCheck(map[string]string{"AWS_REGION": "us-east-1"}, buf)
+	runIdentityCheck("test-profile", "us-east-1", buf)
 	output := buf.String()
 	if !strings.Contains(output, "Current AWS identity") {
 		t.Fatalf("expected identity output, got %q", output)
@@ -132,6 +115,9 @@ func TestShellInitScriptDefault(t *testing.T) {
 	if !strings.Contains(script, "command aws-login --print-env") {
 		t.Fatalf("expected print-env invocation")
 	}
+	if !strings.Contains(script, "doctor|--doctor") {
+		t.Fatalf("expected doctor bypass in shell wrapper")
+	}
 }
 
 func TestShellInitScriptFish(t *testing.T) {
@@ -141,5 +127,8 @@ func TestShellInitScriptFish(t *testing.T) {
 	}
 	if !strings.Contains(script, "set -gx") {
 		t.Fatalf("expected fish env export")
+	}
+	if !strings.Contains(script, "case doctor --doctor") {
+		t.Fatalf("expected doctor bypass in fish wrapper")
 	}
 }

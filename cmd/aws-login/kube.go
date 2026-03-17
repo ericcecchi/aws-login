@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func maybeSwitchKubeAuto(accountID, region, explicitContext string, envVars map[string]string, w io.Writer) {
+func maybeSwitchKubeAuto(accountID, region, explicitContext, profileName, eksRoleARN string, w io.Writer) {
 	if !commandExists("kubectl") {
 		logLine(w, "⚠️  kubectl not found; skipping context switch")
 		return
@@ -23,7 +23,7 @@ func maybeSwitchKubeAuto(accountID, region, explicitContext string, envVars map[
 		return
 	}
 
-	clusters, err := listEKSClusters(region, envVars)
+	clusters, err := listEKSClusters(profileName, region)
 	if err != nil {
 		logLine(w, fmt.Sprintf("⚠️  Unable to list EKS clusters: %v", err))
 		return
@@ -34,7 +34,7 @@ func maybeSwitchKubeAuto(accountID, region, explicitContext string, envVars map[
 	}
 
 	for _, cluster := range clusters {
-		if err := updateKubeconfig(cluster, region, envVars); err != nil {
+		if err := updateKubeconfig(cluster, profileName, region, eksRoleARN); err != nil {
 			logLine(w, fmt.Sprintf("⚠️  Failed to update kubeconfig for %s: %v", cluster, err))
 		}
 	}
@@ -62,9 +62,12 @@ func maybeSwitchKubeAuto(accountID, region, explicitContext string, envVars map[
 	}
 }
 
-func listEKSClusters(region string, envVars map[string]string) ([]string, error) {
-	cmd := exec.Command("aws", "eks", "list-clusters", "--region", region, "--output", "json", "--no-cli-pager")
-	cmd.Env = mergeEnv(envVars)
+func listEKSClusters(profileName, region string) ([]string, error) {
+	args := []string{"eks", "list-clusters", "--region", region, "--output", "json", "--no-cli-pager"}
+	if profileName != "" {
+		args = append(args, "--profile", profileName)
+	}
+	cmd := exec.Command("aws", args...)
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("aws eks list-clusters failed")
@@ -78,9 +81,15 @@ func listEKSClusters(region string, envVars map[string]string) ([]string, error)
 	return response.Clusters, nil
 }
 
-func updateKubeconfig(cluster, region string, envVars map[string]string) error {
-	cmd := exec.Command("aws", "eks", "update-kubeconfig", "--name", cluster, "--region", region)
-	cmd.Env = mergeEnv(envVars)
+func updateKubeconfig(cluster, profileName, region, roleARN string) error {
+	args := []string{"eks", "update-kubeconfig", "--name", cluster, "--region", region}
+	if profileName != "" {
+		args = append(args, "--profile", profileName)
+	}
+	if roleARN != "" {
+		args = append(args, "--role-arn", roleARN)
+	}
+	cmd := exec.Command("aws", args...)
 	return cmd.Run()
 }
 

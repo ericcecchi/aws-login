@@ -52,7 +52,7 @@ sso_region = us-east-1
 	if err != nil {
 		t.Fatalf("ini load: %v", err)
 	}
-	session, err := resolveSession(cfg, Config{}, &bytes.Buffer{}, "prod", "", true)
+	session, err := resolveSession(cfg, &bytes.Buffer{}, "prod", "", true)
 	if err != nil {
 		t.Fatalf("resolveSession error: %v", err)
 	}
@@ -73,7 +73,7 @@ sso_session = prod
 	if err != nil {
 		t.Fatalf("ini load: %v", err)
 	}
-	session, err := resolveSession(cfg, Config{}, &bytes.Buffer{}, "", "dev", true)
+	session, err := resolveSession(cfg, &bytes.Buffer{}, "", "dev", true)
 	if err != nil {
 		t.Fatalf("resolveSession error: %v", err)
 	}
@@ -95,7 +95,7 @@ sso_region = us-east-1
 	if err != nil {
 		t.Fatalf("ini load: %v", err)
 	}
-	session, err := resolveSession(cfg, Config{}, &bytes.Buffer{}, "", "dev", true)
+	session, err := resolveSession(cfg, &bytes.Buffer{}, "", "dev", true)
 	if err != nil {
 		t.Fatalf("resolveSession error: %v", err)
 	}
@@ -120,7 +120,7 @@ sso_region = us-west-2
 	if err != nil {
 		t.Fatalf("ini load: %v", err)
 	}
-	_, err = resolveSession(cfg, Config{}, &bytes.Buffer{}, "", "", true)
+	_, err = resolveSession(cfg, &bytes.Buffer{}, "", "", true)
 	if err == nil {
 		t.Fatalf("expected error for multiple sessions in non-interactive mode")
 	}

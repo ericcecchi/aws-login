@@ -7,11 +7,11 @@ import (
 )
 
 func TestParseArgsPositional(t *testing.T) {
-	args, err := parseArgs([]string{"acct", "role"})
+	args, err := parseArgs([]string{"dev"})
 	if err != nil {
 		t.Fatalf("parseArgs error: %v", err)
 	}
-	if args.Target != "acct" || args.Role != "role" {
+	if args.Target != "dev" || args.Role != "" {
 		t.Fatalf("unexpected args: %+v", args)
 	}
 }
@@ -20,7 +20,6 @@ func TestParseArgsFlags(t *testing.T) {
 	args, err := parseArgs([]string{
 		"--account", "123",
 		"--role", "Admin",
-		"--alias", "dev",
 		"--profile", "prof",
 		"--sso-session", "session",
 		"--region", "us-east-1",
@@ -33,7 +32,7 @@ func TestParseArgsFlags(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parseArgs error: %v", err)
 	}
-	if args.Account != "123" || args.Role != "Admin" || args.Alias != "dev" || args.Profile != "prof" {
+	if args.Account != "123" || args.Role != "Admin" || args.Profile != "prof" {
 		t.Fatalf("unexpected args: %+v", args)
 	}
 	if !args.NoKube || !args.NonInteractive || !args.PrintEnv || !args.Version {
@@ -42,15 +41,52 @@ func TestParseArgsFlags(t *testing.T) {
 }
 
 func TestParseArgsInterspersedFlags(t *testing.T) {
-	args, err := parseArgs([]string{"dev", "admin", "--print-env"})
+	args, err := parseArgs([]string{"dev", "--print-env"})
 	if err != nil {
 		t.Fatalf("parseArgs error: %v", err)
 	}
-	if args.Target != "dev" || args.Role != "admin" {
+	if args.Target != "dev" || args.Role != "" {
 		t.Fatalf("unexpected positional args: %+v", args)
 	}
 	if !args.PrintEnv {
 		t.Fatalf("expected PrintEnv=true")
+	}
+}
+
+func TestParseArgsTooManyPositionals(t *testing.T) {
+	_, err := parseArgs([]string{"dev", "admin"})
+	if err == nil {
+		t.Fatalf("expected positional argument error")
+	}
+}
+
+func TestParseArgsDoctorPositional(t *testing.T) {
+	args, err := parseArgs([]string{"doctor"})
+	if err != nil {
+		t.Fatalf("parseArgs error: %v", err)
+	}
+	if !args.Doctor {
+		t.Fatalf("expected Doctor=true")
+	}
+	if args.Target != "" {
+		t.Fatalf("expected empty target for doctor command, got %q", args.Target)
+	}
+}
+
+func TestParseArgsDoctorFlag(t *testing.T) {
+	args, err := parseArgs([]string{"--doctor"})
+	if err != nil {
+		t.Fatalf("parseArgs error: %v", err)
+	}
+	if !args.Doctor {
+		t.Fatalf("expected Doctor=true")
+	}
+}
+
+func TestParseArgsDoctorRejectsExtraPositionals(t *testing.T) {
+	_, err := parseArgs([]string{"doctor", "extra"})
+	if err == nil {
+		t.Fatalf("expected doctor positional error")
 	}
 }
 
