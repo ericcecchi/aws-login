@@ -1,13 +1,16 @@
 # aws-login
 
-`aws-login` is a fast, zero-config AWS SSO helper that discovers every account and role you can access, then exports short‑lived credentials for your current shell. It also auto‑configures Kubernetes contexts for EKS so you can start working immediately.
+`aws-login` is a fast, zero-config AWS SSO helper that discovers every account and role you can access, then configures AWS profiles for SSO use. It also auto-configures Kubernetes contexts for EKS so you can start working immediately.
 
 ## Highlights
 
 - Interactive fuzzy selection for accounts and roles.
 - Automatic onboarding if you have never run `aws configure sso`.
-- Writes a short‑lived AWS profile per account/role for easy `--profile` use.
+- Configures AWS profiles through `aws configure set` (no direct config-file writes).
 - Auto‑discovers EKS clusters and switches kube context.
+- Caches account and role lookups in `~/.aws-login/cache` using stale-while-revalidate.
+- Uses a cross-terminal mutation lock to prevent concurrent config writes.
+- Backs up and auto-recovers AWS/Kubernetes config files if corruption is detected.
 - No extra system dependencies.
 
 ## Requirements
@@ -53,17 +56,22 @@ Pick a specific account/role:
 aws-login --account 123456789012 --role admin
 ```
 
-Use a named alias from `~/.aws-login.toml`:
+Use a profile name:
 
 ```bash
 aws-login dev
-aws-login dev developer
 ```
 
-Print exports for the current shell:
+Print exports for the current shell (optional):
 
 ```bash
 eval "$(aws-login --print-env)"
+```
+
+Run health check and auto-repair for config corruption:
+
+```bash
+aws-login doctor
 ```
 
 ## Shell Integration
@@ -79,39 +87,34 @@ For non-bash shells, set `AWS_LOGIN_SHELL` to `fish` before running the command.
 
 ## Configuration
 
-`aws-login` reads optional config from `~/.aws-login.toml` (or `AWS_LOGIN_CONFIG`).
-If the file does not exist, a minimal config is created automatically.
+`aws-login` wraps the existing AWS CLI configuration:
 
-Start with `config_sample.toml` to define aliases and defaults.
+- `~/.aws/config` for SSO session/profile metadata
+- AWS CLI credential resolution and caches for temporary credentials
 
-Example:
+Example profile in `~/.aws/config`:
 
-```toml
-[defaults]
-sso_session = "my-sso"
-
-[aliases.dev]
-account_id = "123456789012"
-default_role = "admin"
-roles = ["admin", "read"]
-region = "us-east-1"
+```ini
+[profile dev]
+sso_session = my-sso
+sso_account_id = 123456789012
+sso_role_name = admin
+region = us-east-1
+output = json
 ```
 
 ## Profiles
 
-Each login writes a short‑lived AWS profile named:
+Each login writes/updates an AWS profile named:
 
-`aws-login-<account>-<role>`
+`aws-login-<account-id>-<role>`
 
-These are saved into:
-
-- `~/.aws/config`
-- `~/.aws/credentials`
+Profile configuration is written via AWS CLI commands, and credentials are resolved by AWS CLI at runtime.
 
 You can then use:
 
 ```bash
-aws s3 ls --profile aws-login-myaccount-admin
+aws s3 ls --profile aws-login-123456789012-admin
 ```
 
 ## Kubernetes
@@ -141,6 +144,8 @@ If `~/.aws/config` is missing or no SSO sessions are configured, the tool will:
 - **No TTY available**: Use `--account` and `--role` or `--non-interactive`.
 - **No SSO sessions found**: Run `aws configure sso` and try again.
 - **No EKS clusters**: The tool will skip kube context switching.
+- **Concurrent runs blocked**: Wait for the other `aws-login` process to finish; config updates are serialized to avoid corruption.
+- **Recover from corruption**: Run `aws-login doctor` to validate and restore configs from backups in `~/.aws-login/backups`.
 
 ## Development
 
