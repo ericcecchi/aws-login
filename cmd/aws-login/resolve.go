@@ -7,6 +7,13 @@ import (
 	"strings"
 )
 
+func normalizeAccountName(s string) string {
+	s = strings.ToLower(s)
+	s = strings.ReplaceAll(s, " ", "-")
+	s = strings.ReplaceAll(s, "_", "-")
+	return s
+}
+
 func resolveAccount(accounts []AccountInfo, query string, w io.Writer, nonInteractive bool) (AccountInfo, error) {
 	if len(accounts) == 0 {
 		return AccountInfo{}, fmt.Errorf("no AWS accounts found for this SSO session")
@@ -32,6 +39,17 @@ func resolveAccount(accounts []AccountInfo, query string, w io.Writer, nonIntera
 		}
 		if len(exact) == 1 {
 			return exact[0], nil
+		}
+
+		normalizedQuery := normalizeAccountName(query)
+		var normalized []AccountInfo
+		for _, acct := range accounts {
+			if normalizeAccountName(acct.AccountName) == normalizedQuery {
+				normalized = append(normalized, acct)
+			}
+		}
+		if len(normalized) == 1 {
+			return normalized[0], nil
 		}
 
 		var partial []AccountInfo

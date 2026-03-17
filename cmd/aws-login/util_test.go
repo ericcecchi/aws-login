@@ -112,8 +112,8 @@ func TestShellInitScriptDefault(t *testing.T) {
 	if !strings.Contains(script, "aws-login()") {
 		t.Fatalf("expected bash shell function")
 	}
-	if !strings.Contains(script, "command aws-login --print-env") {
-		t.Fatalf("expected print-env invocation")
+	if !strings.Contains(script, "command aws-login --set-profile") {
+		t.Fatalf("expected set-profile invocation")
 	}
 	if !strings.Contains(script, "doctor|--doctor") {
 		t.Fatalf("expected doctor bypass in shell wrapper")

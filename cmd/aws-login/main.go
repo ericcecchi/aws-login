@@ -24,10 +24,7 @@ func main() {
 	}
 
 	if args.Doctor {
-		doctorWriter := os.Stdout
-		if args.PrintEnv {
-			doctorWriter = os.Stderr
-		}
+		doctorWriter := logWriter(args)
 		if err := runDoctor(doctorWriter); err != nil {
 			logLine(os.Stderr, fmt.Sprintf("Doctor failed: %v", err))
 			os.Exit(1)
@@ -35,7 +32,7 @@ func main() {
 		return
 	}
 
-	writer := logWriter(args.PrintEnv)
+	writer := logWriter(args)
 
 	if !commandExists("aws") {
 		logLine(writer, "Error: AWS CLI is not installed or not in PATH")
@@ -52,11 +49,7 @@ func main() {
 	selectedRole := strings.TrimSpace(args.Role)
 	kubeContext := strings.TrimSpace(args.KubeContext)
 	regionOverride := strings.TrimSpace(args.Region)
-	profileName, err := resolveRequestedProfile(args)
-	if err != nil {
-		logLine(writer, fmt.Sprintf("Error: %v", err))
-		os.Exit(1)
-	}
+	profileName := strings.TrimSpace(args.Profile)
 
 	profileInfo := ProfileInfo{}
 	profileFound := false
@@ -165,20 +158,8 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Print(formatExports(creds, region, profileName))
+	} else if args.SetProfile {
+		fmt.Printf("export AWS_PROFILE=%s\n", shellQuote(profileName))
 	}
 }
 
-func resolveRequestedProfile(args Args) (string, error) {
-	profileName := strings.TrimSpace(args.Profile)
-	targetProfile := strings.TrimSpace(args.Target)
-	if profileName != "" && targetProfile != "" && profileName != targetProfile {
-		return "", fmt.Errorf("positional profile and --profile do not match")
-	}
-	if profileName == "" {
-		profileName = targetProfile
-	}
-	if profileName != "" {
-		return profileName, nil
-	}
-	return "", nil
-}

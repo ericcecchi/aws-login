@@ -16,6 +16,20 @@ func TestResolveAccountByID(t *testing.T) {
 	}
 }
 
+func TestResolveAccountByNormalizedName(t *testing.T) {
+	accounts := []AccountInfo{{AccountID: "123", AccountName: "My Production Account"}}
+	tests := []string{"my-production-account", "my_production_account", "My Production Account"}
+	for _, query := range tests {
+		acct, err := resolveAccount(accounts, query, &bytes.Buffer{}, true)
+		if err != nil {
+			t.Fatalf("resolveAccount(%q) error: %v", query, err)
+		}
+		if acct.AccountID != "123" {
+			t.Fatalf("resolveAccount(%q) unexpected account: %+v", query, acct)
+		}
+	}
+}
+
 func TestResolveAccountAmbiguous(t *testing.T) {
 	accounts := []AccountInfo{
 		{AccountID: "123", AccountName: "Prod"},
