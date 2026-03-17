@@ -43,7 +43,6 @@ type SSOCacheEntry struct {
 }
 
 type Args struct {
-	Target         string
 	Role           string
 	Account        string
 	Profile        string
@@ -54,6 +53,7 @@ type Args struct {
 	NoKube         bool
 	NonInteractive bool
 	PrintEnv       bool
+	SetProfile     bool
 	ShellInit      bool
 	Version        bool
 }

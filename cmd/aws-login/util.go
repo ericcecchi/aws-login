@@ -33,7 +33,7 @@ func shellInitScript(shell string) string {
         return $status
     end
   end
-  set -l out (command aws-login --print-env $argv); or return $status
+  set -l out (command aws-login --set-profile $argv); or return $status
   for line in $out
     if test (string sub -l 7 $line) = "export "
       set -l kv (string sub -s 8 $line)
@@ -56,7 +56,7 @@ end
     esac
   fi
   local out
-  out="$(command aws-login --print-env "$@")" || return
+  out="$(command aws-login --set-profile "$@")" || return
   eval "$out"
 }
 `

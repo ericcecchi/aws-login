@@ -22,6 +22,7 @@ func parseArgs(args []string) (Args, error) {
 	noKube := fs.Bool("no-kube", false, "Skip kubectl context switching")
 	nonInteractive := fs.Bool("non-interactive", false, "Fail instead of prompting")
 	printEnv := fs.Bool("print-env", false, "Print export statements to stdout")
+	setProfile := fs.Bool("set-profile", false, "Export AWS_PROFILE after login")
 	shellInit := fs.Bool("shell-init", false, "Print shell integration script")
 	versionFlag := fs.Bool("version", false, "Print version")
 	versionShort := fs.Bool("v", false, "Print version")
@@ -31,22 +32,33 @@ func parseArgs(args []string) (Args, error) {
 	}
 
 	positional := fs.Args()
-	var target string
+	account := *accountFlag
+	role := *roleFlag
 	doctorPositional := len(positional) > 0 && positional[0] == "doctor"
 	if doctorPositional && len(positional) > 1 {
 		return Args{}, fmt.Errorf("doctor command does not accept positional arguments")
 	}
-	if len(positional) > 0 && !doctorPositional {
-		target = positional[0]
-	}
-	if len(positional) > 1 {
-		return Args{}, fmt.Errorf("too many positional arguments; use --account and --role")
+	if !doctorPositional {
+		if len(positional) > 2 {
+			return Args{}, fmt.Errorf("too many positional arguments; expected <account> [role]")
+		}
+		if len(positional) >= 1 {
+			if account != "" {
+				return Args{}, fmt.Errorf("cannot use positional <account> with --account flag")
+			}
+			account = positional[0]
+		}
+		if len(positional) == 2 {
+			if role != "" {
+				return Args{}, fmt.Errorf("cannot use positional <role> with --role flag")
+			}
+			role = positional[1]
+		}
 	}
 
 	return Args{
-		Target:         target,
-		Role:           *roleFlag,
-		Account:        *accountFlag,
+		Role:           role,
+		Account:        account,
 		Profile:        *profileFlag,
 		SSOSession:     *ssoSessionFlag,
 		Region:         *regionFlag,
@@ -55,23 +67,26 @@ func parseArgs(args []string) (Args, error) {
 		NoKube:         *noKube,
 		NonInteractive: *nonInteractive,
 		PrintEnv:       *printEnv,
+		SetProfile:     *setProfile,
 		ShellInit:      *shellInit,
 		Version:        *versionFlag || *versionShort,
 	}, nil
 }
 
 func printUsage(w io.Writer) {
-	_, _ = w.Write([]byte("Usage: aws-login [profile]\n"))
+	_, _ = w.Write([]byte("Usage: aws-login <account> <role>\n"))
+	_, _ = w.Write([]byte("       aws-login <account> --role <role>\n"))
 	_, _ = w.Write([]byte("       aws-login --account <id|name> --role <role>\n"))
 	_, _ = w.Write([]byte("       aws-login --profile <name>\n"))
+	_, _ = w.Write([]byte("       aws-login --set-profile\n"))
 	_, _ = w.Write([]byte("       aws-login doctor\n"))
 	_, _ = w.Write([]byte("       aws-login --print-env\n"))
 	_, _ = w.Write([]byte("       aws-login --shell-init\n"))
 	_, _ = w.Write([]byte("       aws-login --version\n"))
 }
 
-func logWriter(printEnv bool) io.Writer {
-	if printEnv {
+func logWriter(args Args) io.Writer {
+	if args.PrintEnv || args.SetProfile {
 		return os.Stderr
 	}
 	return os.Stdout
@@ -90,6 +105,7 @@ func normalizeArgs(args []string) []string {
 		"--no-kube":         {},
 		"--non-interactive": {},
 		"--print-env":       {},
+		"--set-profile":     {},
 		"--doctor":          {},
 		"--shell-init":      {},
 		"--version":         {},
