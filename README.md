@@ -50,19 +50,32 @@ Interactive login with fuzzy selection:
 aws-login
 ```
 
-Pick a specific account/role:
+Pick a specific account and role:
+
+```bash
+aws-login myaccount admin
+aws-login 123456789012 ReadOnly
+```
+
+Or use flags:
 
 ```bash
 aws-login --account 123456789012 --role admin
 ```
 
-Use a profile name:
+Use a named profile:
 
 ```bash
-aws-login dev
+aws-login --profile dev
 ```
 
-Print exports for the current shell (optional):
+Export `AWS_PROFILE` for the current shell:
+
+```bash
+eval "$(aws-login --set-profile myaccount admin)"
+```
+
+Print full credential exports for the current shell:
 
 ```bash
 eval "$(aws-login --print-env)"
@@ -76,14 +89,20 @@ aws-login doctor
 
 ## Shell Integration
 
-To make environment updates automatic, add the shell wrapper once:
+To make `AWS_PROFILE` automatically set in your shell after login, add the shell wrapper once:
 
 ```bash
 eval "$(aws-login --shell-init)"
 ```
 
-This defines an `aws-login` shell function that runs the binary and applies the exported AWS credentials to your current shell session.
+This defines an `aws-login` shell function that runs the binary and applies `AWS_PROFILE` to your current shell session.
 For non-bash shells, set `AWS_LOGIN_SHELL` to `fish` before running the command.
+
+For full credential exports (access key, secret, token), use `--print-env` instead:
+
+```bash
+eval "$(aws-login --print-env myaccount admin)"
+```
 
 ## Configuration
 

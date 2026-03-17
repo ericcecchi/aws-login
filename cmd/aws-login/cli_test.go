@@ -6,12 +6,22 @@ import (
 	"testing"
 )
 
-func TestParseArgsPositional(t *testing.T) {
-	args, err := parseArgs([]string{"dev"})
+func TestParseArgsTwoPositionals(t *testing.T) {
+	args, err := parseArgs([]string{"myaccount", "admin"})
 	if err != nil {
 		t.Fatalf("parseArgs error: %v", err)
 	}
-	if args.Target != "dev" || args.Role != "" {
+	if args.Account != "myaccount" || args.Role != "admin" {
+		t.Fatalf("unexpected args: %+v", args)
+	}
+}
+
+func TestParseArgsSinglePositionalAccount(t *testing.T) {
+	args, err := parseArgs([]string{"myaccount"})
+	if err != nil {
+		t.Fatalf("parseArgs error: %v", err)
+	}
+	if args.Account != "myaccount" || args.Role != "" {
 		t.Fatalf("unexpected args: %+v", args)
 	}
 }
@@ -27,6 +37,7 @@ func TestParseArgsFlags(t *testing.T) {
 		"--no-kube",
 		"--non-interactive",
 		"--print-env",
+		"--set-profile",
 		"--version",
 	})
 	if err != nil {
@@ -35,17 +46,17 @@ func TestParseArgsFlags(t *testing.T) {
 	if args.Account != "123" || args.Role != "Admin" || args.Profile != "prof" {
 		t.Fatalf("unexpected args: %+v", args)
 	}
-	if !args.NoKube || !args.NonInteractive || !args.PrintEnv || !args.Version {
+	if !args.NoKube || !args.NonInteractive || !args.PrintEnv || !args.SetProfile || !args.Version {
 		t.Fatalf("expected flags to be true: %+v", args)
 	}
 }
 
 func TestParseArgsInterspersedFlags(t *testing.T) {
-	args, err := parseArgs([]string{"dev", "--print-env"})
+	args, err := parseArgs([]string{"myaccount", "--print-env", "admin"})
 	if err != nil {
 		t.Fatalf("parseArgs error: %v", err)
 	}
-	if args.Target != "dev" || args.Role != "" {
+	if args.Account != "myaccount" || args.Role != "admin" {
 		t.Fatalf("unexpected positional args: %+v", args)
 	}
 	if !args.PrintEnv {
@@ -54,9 +65,23 @@ func TestParseArgsInterspersedFlags(t *testing.T) {
 }
 
 func TestParseArgsTooManyPositionals(t *testing.T) {
-	_, err := parseArgs([]string{"dev", "admin"})
+	_, err := parseArgs([]string{"acct", "role", "extra"})
 	if err == nil {
 		t.Fatalf("expected positional argument error")
+	}
+}
+
+func TestParseArgsPositionalConflictsWithAccountFlag(t *testing.T) {
+	_, err := parseArgs([]string{"myaccount", "--account", "otheraccount"})
+	if err == nil {
+		t.Fatalf("expected error when positional account conflicts with --account flag")
+	}
+}
+
+func TestParseArgsPositionalConflictsWithRoleFlag(t *testing.T) {
+	_, err := parseArgs([]string{"myaccount", "myrole", "--role", "otherrole"})
+	if err == nil {
+		t.Fatalf("expected error when positional role conflicts with --role flag")
 	}
 }
 
@@ -68,8 +93,8 @@ func TestParseArgsDoctorPositional(t *testing.T) {
 	if !args.Doctor {
 		t.Fatalf("expected Doctor=true")
 	}
-	if args.Target != "" {
-		t.Fatalf("expected empty target for doctor command, got %q", args.Target)
+	if args.Account != "" {
+		t.Fatalf("expected empty account for doctor command, got %q", args.Account)
 	}
 }
 
@@ -119,10 +144,13 @@ func TestPrintUsage(t *testing.T) {
 }
 
 func TestLogWriter(t *testing.T) {
-	if logWriter(true) != os.Stderr {
-		t.Fatalf("expected stderr writer")
+	if logWriter(Args{PrintEnv: true}) != os.Stderr {
+		t.Fatalf("expected stderr writer for PrintEnv")
 	}
-	if logWriter(false) != os.Stdout {
+	if logWriter(Args{SetProfile: true}) != os.Stderr {
+		t.Fatalf("expected stderr writer for SetProfile")
+	}
+	if logWriter(Args{}) != os.Stdout {
 		t.Fatalf("expected stdout writer")
 	}
 }

@@ -2,39 +2,32 @@ package main
 
 import "testing"
 
-func TestResolveRequestedProfilePrefersExplicit(t *testing.T) {
-	profile, err := resolveRequestedProfile(Args{Profile: "dev", Target: "dev"})
+func TestProfileFlagIsUsed(t *testing.T) {
+	args, err := parseArgs([]string{"--profile", "dev"})
 	if err != nil {
-		t.Fatalf("resolveRequestedProfile error: %v", err)
+		t.Fatalf("parseArgs error: %v", err)
 	}
-	if profile != "dev" {
-		t.Fatalf("expected explicit profile, got %q", profile)
+	if args.Profile != "dev" {
+		t.Fatalf("expected profile dev, got %q", args.Profile)
 	}
 }
 
-func TestResolveRequestedProfileNoSelection(t *testing.T) {
-	profile, err := resolveRequestedProfile(Args{})
+func TestAccountRoleFlagsNoProfile(t *testing.T) {
+	args, err := parseArgs([]string{"--account", "123", "--role", "Admin"})
 	if err != nil {
-		t.Fatalf("resolveRequestedProfile error: %v", err)
+		t.Fatalf("parseArgs error: %v", err)
 	}
-	if profile != "" {
-		t.Fatalf("expected empty profile, got %q", profile)
+	if args.Account != "123" || args.Role != "Admin" || args.Profile != "" {
+		t.Fatalf("unexpected args: %+v", args)
 	}
 }
 
-func TestResolveRequestedProfileForAccountRoleSwitch(t *testing.T) {
-	profile, err := resolveRequestedProfile(Args{Account: "123", Role: "Admin"})
+func TestPositionalAccountAndRoleArgs(t *testing.T) {
+	args, err := parseArgs([]string{"myaccount", "admin"})
 	if err != nil {
-		t.Fatalf("resolveRequestedProfile error: %v", err)
+		t.Fatalf("parseArgs error: %v", err)
 	}
-	if profile != "" {
-		t.Fatalf("expected no profile selection, got %q", profile)
-	}
-}
-
-func TestResolveRequestedProfileMismatchError(t *testing.T) {
-	_, err := resolveRequestedProfile(Args{Profile: "dev", Target: "prod"})
-	if err == nil {
-		t.Fatalf("expected profile mismatch error")
+	if args.Account != "myaccount" || args.Role != "admin" {
+		t.Fatalf("expected account=myaccount role=admin, got %+v", args)
 	}
 }
