@@ -38,7 +38,16 @@ func TestBuildProfileName(t *testing.T) {
 	acct := AccountInfo{AccountName: "Prod Account", AccountID: "123"}
 	role := RoleInfo{RoleName: "Admin"}
 	got := buildProfileName(acct, role)
-	if got != "aws-login-123-admin" {
+	if got != "prod-account-admin" {
+		t.Fatalf("unexpected profile name: %q", got)
+	}
+}
+
+func TestBuildProfileNameFallsBackToAccountID(t *testing.T) {
+	acct := AccountInfo{AccountName: "", AccountID: "123456789012"}
+	role := RoleInfo{RoleName: "read"}
+	got := buildProfileName(acct, role)
+	if got != "123456789012-read" {
 		t.Fatalf("unexpected profile name: %q", got)
 	}
 }

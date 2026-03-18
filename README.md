@@ -126,14 +126,16 @@ output = json
 
 Each login writes/updates an AWS profile named:
 
-`aws-login-<account-id>-<role>`
+`<account-name>-<role>`
+
+For example, an account named `prod` with role `admin` produces a profile named `prod-admin`.
 
 Profile configuration is written via AWS CLI commands, and credentials are resolved by AWS CLI at runtime.
 
 You can then use:
 
 ```bash
-aws s3 ls --profile aws-login-123456789012-admin
+aws s3 ls --profile prod-admin
 ```
 
 ## Kubernetes

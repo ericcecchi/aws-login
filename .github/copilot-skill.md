@@ -108,10 +108,10 @@ aws-login --non-interactive 123456789012 admin
 When no `--profile` is specified, profiles are auto-named as:
 
 ```
-aws-login-<account-id>-<role>
+<account-name>-<role>
 ```
 
-Example: `aws-login-123456789012-admin`
+Example: `prod-admin`
 
 ## Shell Integration
 

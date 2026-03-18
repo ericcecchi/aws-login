@@ -12,11 +12,14 @@ import (
 
 func buildProfileName(account AccountInfo, role RoleInfo) string {
 	rolePart := sanitizeProfilePart(role.RoleName)
-	accountID := sanitizeProfilePart(account.AccountID)
-	if accountID == "" {
-		accountID = "account"
+	accountPart := sanitizeProfilePart(account.AccountName)
+	if accountPart == "" {
+		accountPart = sanitizeProfilePart(account.AccountID)
 	}
-	return fmt.Sprintf("aws-login-%s-%s", accountID, rolePart)
+	if accountPart == "" {
+		accountPart = "account"
+	}
+	return fmt.Sprintf("%s-%s", accountPart, rolePart)
 }
 
 func sanitizeProfilePart(value string) string {
