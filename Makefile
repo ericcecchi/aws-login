@@ -3,8 +3,8 @@ BINARY=aws-login
 .PHONY: install build
 
 install:
-	go install ./cmd/aws-login
+	go install .
 
 build:
 	mkdir -p bin
-	go build -o bin/$(BINARY) ./cmd/aws-login
+	go build -o bin/$(BINARY) .

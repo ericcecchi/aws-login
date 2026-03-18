@@ -1,4 +1,4 @@
-package main
+package awslogin
 
 const (
 	version        = "0.3.1"

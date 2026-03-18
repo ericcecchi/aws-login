@@ -1,4 +1,4 @@
-package main
+package awslogin
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func main() {
+func Run() {
 	args, err := parseArgs(os.Args[1:])
 	if err != nil {
 		printUsage(os.Stderr)
