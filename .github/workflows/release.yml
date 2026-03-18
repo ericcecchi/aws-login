@@ -30,7 +30,7 @@ jobs:
       - name: Commit version update
         if: ${{ steps.semrel.outputs.version != '' }}
         run: |
-          if git diff --quiet -- cmd/aws-login/constants.go; then
+          if git diff --quiet -- internal/awslogin/constants.go; then
             echo "No version update to commit."
             exit 0
           fi
