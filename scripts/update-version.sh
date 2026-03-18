@@ -7,7 +7,7 @@ if [[ -z "$version" ]]; then
   exit 1
 fi
 
-file="cmd/aws-login/constants.go"
+file="internal/awslogin/constants.go"
 
 python3 - "$file" "$version" <<'PY'
 import re
