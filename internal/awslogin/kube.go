@@ -82,7 +82,7 @@ func listEKSClusters(profileName, region string) ([]string, error) {
 }
 
 func updateKubeconfig(cluster, profileName, region, roleARN string) error {
-	args := []string{"eks", "update-kubeconfig", "--name", cluster, "--region", region}
+	args := []string{"eks", "update-kubeconfig", "--name", cluster, "--region", region, "--alias", cluster}
 	if profileName != "" {
 		args = append(args, "--profile", profileName)
 	}
