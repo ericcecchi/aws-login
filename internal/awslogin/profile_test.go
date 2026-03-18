@@ -38,7 +38,16 @@ func TestBuildProfileName(t *testing.T) {
 	acct := AccountInfo{AccountName: "Prod Account", AccountID: "123"}
 	role := RoleInfo{RoleName: "Admin"}
 	got := buildProfileName(acct, role)
-	if got != "aws-login-123-admin" {
+	if got != "prod-account-admin" {
+		t.Fatalf("unexpected profile name: %q", got)
+	}
+}
+
+func TestBuildProfileNameFallsBackToAccountID(t *testing.T) {
+	acct := AccountInfo{AccountName: "", AccountID: "123456789012"}
+	role := RoleInfo{RoleName: "read"}
+	got := buildProfileName(acct, role)
+	if got != "123456789012-read" {
 		t.Fatalf("unexpected profile name: %q", got)
 	}
 }
@@ -127,5 +136,67 @@ func TestEnsureReusableSSOSessionCreatesNew(t *testing.T) {
 	}
 	if !strings.Contains(got, "sso-session.aws-login.sso_region=us-east-1") {
 		t.Fatalf("missing sso_region configure call, got:\n%s", got)
+	}
+}
+
+func TestRemoveAWSLoginLegacyProfiles(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "config")
+	t.Setenv("HOME", dir)
+	if err := os.MkdirAll(filepath.Join(dir, ".aws"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	content := `[sso-session perch]
+sso_start_url = https://example.awsapps.com/start
+sso_region = us-east-1
+
+[profile aws-login-123-admin]
+sso_session = perch
+sso_account_id = 123
+sso_role_name = admin
+region = us-east-1
+
+[profile prod-admin]
+sso_session = perch
+sso_account_id = 123
+sso_role_name = admin
+region = us-east-1
+
+[profile aws-login-456-read]
+sso_session = perch
+sso_account_id = 456
+sso_role_name = read
+region = us-east-1
+`
+	if err := os.WriteFile(configPath, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// Redirect to temp file via HOME so expandPath picks it up
+	if err := os.WriteFile(filepath.Join(dir, ".aws", "config"), []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := removeAWSLoginLegacyProfiles(); err != nil {
+		t.Fatalf("removeAWSLoginLegacyProfiles error: %v", err)
+	}
+
+	result, err := os.ReadFile(filepath.Join(dir, ".aws", "config"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(result)
+
+	if strings.Contains(got, "aws-login-123-admin") {
+		t.Error("expected aws-login-123-admin to be removed")
+	}
+	if strings.Contains(got, "aws-login-456-read") {
+		t.Error("expected aws-login-456-read to be removed")
+	}
+	if !strings.Contains(got, "[profile prod-admin]") {
+		t.Error("expected prod-admin profile to be preserved")
+	}
+	if !strings.Contains(got, "[sso-session perch]") {
+		t.Error("expected sso-session perch to be preserved")
 	}
 }

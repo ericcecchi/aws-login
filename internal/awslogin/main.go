@@ -135,6 +135,9 @@ func Run() {
 	}
 
 	if err := withMutationGuard(!args.NoKube, func() error {
+		if err := removeAWSLoginLegacyProfiles(); err != nil {
+			logLine(writer, fmt.Sprintf("⚠️  Failed to clean up legacy profiles: %v", err))
+		}
 		if err := configureProfile(profileName, region, session, account.AccountID, role.RoleName); err != nil {
 			return err
 		}
