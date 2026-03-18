@@ -128,3 +128,48 @@ sso_region = us-east-1
 		t.Fatalf("unexpected default profile info: %+v found=%v", defaultInfo, found)
 	}
 }
+
+// TestAutoNamedProfileRegionPreserved verifies that when an auto-named profile
+// already exists with a non-default region, re-running login without --region
+// loads the stored region from that profile rather than falling through to the
+// SSO session region.
+func TestAutoNamedProfileRegionPreserved(t *testing.T) {
+	cfg, err := ini.Load([]byte(`
+[sso-session perch]
+sso_start_url = https://example.awsapps.com/start
+sso_region = us-east-1
+
+[profile perch-prod-admin]
+sso_session = perch
+sso_account_id = 103736728945
+sso_role_name = admin
+region = us-east-2
+`))
+	if err != nil {
+		t.Fatalf("ini load: %v", err)
+	}
+
+	// Simulate the fixed flow: after buildProfileName resolves "perch-prod-admin",
+	// we look up the existing profile to get its stored region.
+	profileName := "perch-prod-admin"
+	info, found, err := getProfileInfoIfExists(cfg, profileName)
+	if err != nil {
+		t.Fatalf("getProfileInfoIfExists error: %v", err)
+	}
+	if !found {
+		t.Fatalf("expected profile %q to be found", profileName)
+	}
+
+	sessionRegion := "us-east-1"
+	region := "" // no --region flag
+	if region == "" {
+		region = info.Region
+	}
+	if region == "" {
+		region = sessionRegion
+	}
+
+	if region != "us-east-2" {
+		t.Fatalf("expected region us-east-2 to be preserved from existing profile, got %q", region)
+	}
+}

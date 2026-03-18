@@ -122,16 +122,24 @@ func Run() {
 		os.Exit(1)
 	}
 
+	if profileName == "" {
+		profileName = buildProfileName(account, role)
+	}
+
+	// For auto-named profiles, load existing profile info so we can preserve
+	// any previously stored region rather than defaulting to the SSO session region.
+	if !profileFound {
+		if info, found, err := getProfileInfoIfExists(awsConfig, profileName); err == nil && found {
+			profileInfo = info
+		}
+	}
+
 	region := regionOverride
 	if region == "" {
 		region = profileInfo.Region
 	}
 	if region == "" {
 		region = session.Region
-	}
-
-	if profileName == "" {
-		profileName = buildProfileName(account, role)
 	}
 
 	if err := withMutationGuard(!args.NoKube, func() error {
