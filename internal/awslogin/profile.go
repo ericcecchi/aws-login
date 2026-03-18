@@ -2,7 +2,6 @@ package awslogin
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 	"regexp"
 	"sort"
@@ -21,62 +20,6 @@ func buildProfileName(account AccountInfo, role RoleInfo) string {
 		accountPart = "account"
 	}
 	return fmt.Sprintf("%s-%s", accountPart, rolePart)
-}
-
-// removeAWSLoginLegacyProfiles removes any [profile aws-login-*] sections from
-// the AWS config file. These are profiles created by older versions of this tool
-// that included the account ID and "aws-login-" prefix in the profile name.
-func removeAWSLoginLegacyProfiles() error {
-	configPath := expandPath(awsConfigPath)
-	data, err := os.ReadFile(configPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return err
-	}
-
-	lines := strings.Split(string(data), "\n")
-	result := make([]string, 0, len(lines))
-	skip := false
-	changed := false
-
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "[profile aws-login-") {
-			skip = true
-			changed = true
-			continue
-		}
-		if skip && len(trimmed) > 0 && trimmed[0] == '[' {
-			skip = false
-		}
-		if !skip {
-			result = append(result, line)
-		}
-	}
-
-	if !changed {
-		return nil
-	}
-
-	output := collapseBlankLines(strings.Join(result, "\n"))
-	return os.WriteFile(configPath, []byte(output), 0o644)
-}
-
-func collapseBlankLines(s string) string {
-	lines := strings.Split(s, "\n")
-	result := make([]string, 0, len(lines))
-	prevBlank := false
-	for _, line := range lines {
-		isBlank := strings.TrimSpace(line) == ""
-		if isBlank && prevBlank {
-			continue
-		}
-		result = append(result, line)
-		prevBlank = isBlank
-	}
-	return strings.Join(result, "\n")
 }
 
 func sanitizeProfilePart(value string) string {

@@ -113,8 +113,6 @@ When no `--profile` is specified, profiles are auto-named as:
 
 Example: `prod-admin`
 
-On each run, legacy profiles with the old `aws-login-<account-id>-<role>` format are automatically cleaned up.
-
 ## Shell Integration
 
 Add to your shell rc file for automatic `AWS_PROFILE` setting:

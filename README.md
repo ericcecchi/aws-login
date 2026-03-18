@@ -130,7 +130,7 @@ Each login writes/updates an AWS profile named:
 
 For example, an account named `prod` with role `admin` produces a profile named `prod-admin`.
 
-Profile configuration is written via AWS CLI commands, and credentials are resolved by AWS CLI at runtime. On each run, any legacy profiles with the old `aws-login-<account-id>-<role>` naming format are automatically removed.
+Profile configuration is written via AWS CLI commands, and credentials are resolved by AWS CLI at runtime.
 
 You can then use:
 
