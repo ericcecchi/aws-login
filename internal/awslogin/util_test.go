@@ -166,9 +166,13 @@ func TestShellInitHookLine(t *testing.T) {
 			if !strings.Contains(line, ".aws-login") {
 				t.Fatalf("expected .aws-login path in hook line, got %q", line)
 			}
-			// Path must be quoted so spaces in HOME are handled correctly.
-			if !strings.Contains(line, "'") {
-				t.Fatalf("expected shell-quoted path in hook line, got %q", line)
+			// Hook line must use tilde path, not absolute.
+			if !strings.HasPrefix(line, "source ~/") {
+				t.Fatalf("expected tilde path in hook line, got %q", line)
+			}
+			// Tilde path should not be quoted (tilde expansion is not word-split).
+			if strings.Contains(line, "'") {
+				t.Fatalf("hook line should not use single quotes, got %q", line)
 			}
 		})
 	}
@@ -278,10 +282,10 @@ func TestInstallShellIntegration(t *testing.T) {
 		t.Fatalf("expected source-to-activate hint, got: %q", output)
 	}
 
-	// Verify hook was added with quoting
+	// Verify hook was added with tilde path
 	content := readFileOrDie(t, zshrc)
-	if !strings.Contains(content, "source '") || !strings.Contains(content, ".aws-login") {
-		t.Fatalf("expected quoted hook line in zshrc, got: %s", content)
+	if !strings.Contains(content, "source ~/") || !strings.Contains(content, ".aws-login") {
+		t.Fatalf("expected tilde hook line in zshrc, got: %s", content)
 	}
 }
 
@@ -302,8 +306,8 @@ func TestInstallShellIntegrationCreatesMissingPrimaryRCFile(t *testing.T) {
 
 	fishRC := home + "/.config/fish/config.fish"
 	content := readFileOrDie(t, fishRC)
-	if !strings.Contains(content, "source '") || !strings.Contains(content, ".aws-login") {
-		t.Fatalf("expected hook line in created config.fish, got: %s", content)
+	if !strings.Contains(content, "source ~/") || !strings.Contains(content, ".aws-login") {
+		t.Fatalf("expected tilde hook line in created config.fish, got: %s", content)
 	}
 }
 

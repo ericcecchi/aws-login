@@ -136,14 +136,24 @@ func shellInitFile(shell string) (string, error) {
 	}
 }
 
-// shellInitHookLine returns the line to add to shell rc file for the given shell.
-// The path is single-quoted so home directories containing spaces work correctly.
-func shellInitHookLine(shell string) (string, error) {
-	file, err := shellInitFile(shell)
-	if err != nil {
-		return "", err
+// shellInitTildePath returns the ~/.aws-login/shell-init/init.<ext> path for the
+// given shell. Using ~ keeps rc files readable and portable across user accounts.
+func shellInitTildePath(shell string) string {
+	switch shell {
+	case "fish":
+		return "~/.aws-login/shell-init/init.fish"
+	case "zsh":
+		return "~/.aws-login/shell-init/init.zsh"
+	default:
+		return "~/.aws-login/shell-init/init.sh"
 	}
-	return fmt.Sprintf("source '%s'", file), nil
+}
+
+// shellInitHookLine returns the line to add to shell rc file for the given shell.
+// Tilde expansion in POSIX shells is not subject to word splitting, so the path
+// is safe even when $HOME contains spaces.
+func shellInitHookLine(shell string) (string, error) {
+	return fmt.Sprintf("source %s", shellInitTildePath(shell)), nil
 }
 
 // ensureShellInitFiles creates the shell initialization files
@@ -258,11 +268,6 @@ func installShellIntegration(shell string, w io.Writer) error {
 		return err
 	}
 
-	initFile, err := shellInitFile(shell)
-	if err != nil {
-		return err
-	}
-
 	rcFiles, err := shellRCFiles(shell)
 	if err != nil {
 		return err
@@ -316,7 +321,7 @@ func installShellIntegration(shell string, w io.Writer) error {
 	}
 
 	logLine(w, "✅ Shell integration installed successfully!")
-	logLine(w, fmt.Sprintf("   To activate in your current session: source '%s'", initFile))
+	logLine(w, fmt.Sprintf("   To activate in your current session: source %s", shellInitTildePath(shell)))
 	return nil
 }
 
