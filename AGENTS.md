@@ -256,7 +256,6 @@ Use this whenever the user needs to pick from a list. It checks for TTY presence
 - `--doctor` — health-check and repair mode
 - `--install` — installs shell integration (one-time setup; modifies shell rc files)
 - `--uninstall` — removes shell integration from shell rc files
-- `--shell-init` — prints shell function wrapper (legacy; deprecated in favor of `--install`)
 - `--version` / `-v` — prints version
 
 ### Shell Integration
@@ -268,8 +267,6 @@ The recommended workflow is to run `aws-login --install` once, which:
 3. Provides an `aws-login` wrapper function that automatically sets `AWS_PROFILE`
 
 After installation, users simply run `aws-login account role` and the profile is set in their current shell. No eval or manual setup needed for subsequent commands.
-
-The `--shell-init` flag is kept for backward compatibility but users should prefer `--install`.
 
 ---
 

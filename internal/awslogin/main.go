@@ -18,11 +18,6 @@ func Run() {
 		return
 	}
 
-	if args.ShellInit {
-		fmt.Print(shellInitScript(detectShell()))
-		return
-	}
-
 	if args.Install {
 		if err := installShellIntegration(detectShell(), os.Stdout); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to install shell integration: %v\n", err)

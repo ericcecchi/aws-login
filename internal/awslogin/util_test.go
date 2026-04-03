@@ -108,32 +108,6 @@ func TestRunIdentityCheck(t *testing.T) {
 	}
 }
 
-func TestShellInitScriptDefault(t *testing.T) {
-	script := shellInitScript("bash")
-	if !strings.Contains(script, "aws-login()") {
-		t.Fatalf("expected bash shell function")
-	}
-	if !strings.Contains(script, "command aws-login --set-profile") {
-		t.Fatalf("expected set-profile invocation")
-	}
-	if !strings.Contains(script, "doctor|--doctor") {
-		t.Fatalf("expected doctor bypass in shell wrapper")
-	}
-}
-
-func TestShellInitScriptFish(t *testing.T) {
-	script := shellInitScript("fish")
-	if !strings.Contains(script, "function aws-login") {
-		t.Fatalf("expected fish function")
-	}
-	if !strings.Contains(script, "set -gx") {
-		t.Fatalf("expected fish env export")
-	}
-	if !strings.Contains(script, "case doctor --doctor") {
-		t.Fatalf("expected doctor bypass in fish wrapper")
-	}
-}
-
 func TestShellInitDir(t *testing.T) {
 	setTempHome(t)
 	dir, err := shellInitDir()

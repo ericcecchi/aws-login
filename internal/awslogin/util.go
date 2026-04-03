@@ -22,47 +22,6 @@ func detectShell() string {
 	return shell
 }
 
-func shellInitScript(shell string) string {
-	switch shell {
-	case "fish":
-		return `function aws-login
-  if test (count $argv) -gt 0
-    switch $argv[1]
-      case doctor --doctor --version -v --shell-init -h --help
-        command aws-login $argv
-        return $status
-    end
-  end
-  set -l out (command aws-login --set-profile $argv); or return $status
-  for line in $out
-    if test (string sub -l 7 $line) = "export "
-      set -l kv (string sub -s 8 $line)
-      set -l parts (string split -m 1 "=" $kv)
-      if test (count $parts) -ge 2
-        set -gx $parts[1] $parts[2]
-      end
-    end
-  end
-end
-`
-	default:
-		return `aws-login() {
-  if [ "$#" -gt 0 ]; then
-    case "$1" in
-      doctor|--doctor|--version|-v|--shell-init|-h|--help)
-        command aws-login "$@"
-        return
-        ;;
-    esac
-  fi
-  local out
-  out="$(command aws-login --set-profile "$@")" || return
-  eval "$out"
-}
-`
-	}
-}
-
 func logLine(w io.Writer, message string) {
 	fmt.Fprintln(w, message)
 }
