@@ -18,7 +18,7 @@ import (
 func resolveSession(cfg *ini.File, w io.Writer, ssoSessionFlag, profileFlag string, nonInteractive bool) (SessionInfo, error) {
 	cfg = ensureSSOConfigured(cfg, w, nonInteractive)
 	if cfg == nil {
-		return SessionInfo{}, fmt.Errorf("no AWS SSO sessions found; run 'aws configure sso'")
+		return SessionInfo{}, fmt.Errorf("no AWS SSO sessions found; run 'aws configure sso-session'")
 	}
 
 	sessions := listSSOSessions(cfg)
@@ -129,8 +129,8 @@ func ensureSSOConfigured(cfg *ini.File, w io.Writer, nonInteractive bool) *ini.F
 		return nil
 	}
 
-	logLine(w, "No AWS SSO sessions found. Launching 'aws configure sso'...")
-	cmd := exec.Command("aws", "configure", "sso")
+	logLine(w, "No AWS SSO sessions found. Launching 'aws configure sso-session'...")
+	cmd := exec.Command("aws", "configure", "sso-session")
 	cmd.Stdout = w
 	cmd.Stderr = w
 	cmd.Stdin = os.Stdin
