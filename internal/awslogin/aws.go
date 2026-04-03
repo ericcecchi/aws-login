@@ -96,7 +96,6 @@ func resolveSession(cfg *ini.File, w io.Writer, ssoSessionFlag, profileFlag stri
 		if nonInteractive {
 			return SessionInfo{}, fmt.Errorf("multiple SSO sessions available; specify --sso-session or --profile")
 		}
-		logLine(w, "Select an AWS SSO session:")
 		names := make([]string, 0, len(sessions))
 		for name := range sessions {
 			names = append(names, name)

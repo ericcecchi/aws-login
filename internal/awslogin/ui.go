@@ -10,6 +10,21 @@ import (
 	"golang.org/x/term"
 )
 
+// filterItem reports whether the display label at the given index matches the
+// search input.  An empty input matches every item so the initial list is fully
+// visible.  Exported as a named function so it can be unit-tested independently
+// of the terminal UI.
+func filterItem(displayItems []string, input string, index int) bool {
+	needle := strings.TrimSpace(strings.ToLower(input))
+	if needle == "" {
+		return true
+	}
+	if index < 0 || index >= len(displayItems) {
+		return false
+	}
+	return strings.Contains(strings.ToLower(displayItems[index]), needle)
+}
+
 func chooseInteractive[T any](items []T, title string, label func(T) string) (T, error) {
 	var zero T
 	if len(items) == 0 {
@@ -28,23 +43,26 @@ func chooseInteractive[T any](items []T, title string, label func(T) string) (T,
 	}
 
 	searcher := func(input string, index int) bool {
-		needle := strings.TrimSpace(strings.ToLower(input))
-		if needle == "" {
-			return true
-		}
-		return strings.Contains(strings.ToLower(displayItems[index]), needle)
+		return filterItem(displayItems, input, index)
 	}
 
+	// The shell integration wrapper captures aws-login's stdout with $() so
+	// that it can eval the exported AWS_PROFILE.  Writing the interactive UI
+	// to stdout would make it invisible to the user.  Stderr is never captured
+	// by the wrapper and is always connected to the user's terminal, so we
+	// direct all picker output there.
 	selector := promptui.Select{
-		Label:    fmt.Sprintf("%s  (type to filter, enter to choose)", title),
-		Items:    displayItems,
-		Size:     pickerWindowSize(len(displayItems)),
-		Searcher: searcher,
+		Label:            fmt.Sprintf("%s", title),
+		Items:            displayItems,
+		Size:             pickerWindowSize(len(displayItems)),
+		Searcher:         searcher,
+		StartInSearchMode: true,
+		Stdout:           os.Stderr,
 		Templates: &promptui.SelectTemplates{
-			Label:    "{{ . }}",
-			Active:   `▸ {{ . | cyan }}`,
-			Inactive: `  {{ . }}`,
-			Selected: `✓ {{ . | green }}`,
+			Label:    `{{ "▶" | cyan }} {{ . | bold }}`,
+			Active:   `  {{ "›" | cyan }} {{ . | cyan }}`,
+			Inactive: `    {{ . }}`,
+			Selected: `  {{ "✓" | green }} {{ . | green }}`,
 		},
 	}
 
@@ -69,3 +87,4 @@ func pickerWindowSize(total int) int {
 	}
 	return total
 }
+
