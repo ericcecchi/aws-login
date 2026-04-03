@@ -1,16 +1,9 @@
-# aws-login CLI Skill
+---
+name: aws-login-cli
+description: Fast, zero-config AWS SSO login helper that discovers accounts and roles, configures AWS profiles, and auto-configures EKS Kubernetes contexts. Use when authenticating with AWS SSO, switching between AWS accounts or roles, setting up AWS profiles for CLI usage, configuring Kubernetes contexts for EKS clusters, or exporting AWS_PROFILE for tools that support named profiles.
+---
 
-> A fast, zero-config AWS SSO login helper that discovers accounts and roles, configures AWS profiles, and auto-configures EKS Kubernetes contexts.
-
-## When to Use
-
-Use `aws-login` when you need to:
-
-- Authenticate with AWS SSO and get short-lived credentials
-- Switch between AWS accounts and roles
-- Set up AWS profiles for CLI usage
-- Configure Kubernetes contexts for EKS clusters
-- Export `AWS_PROFILE` for tools that support named profiles
+# aws-login CLI
 
 ## Commands
 
