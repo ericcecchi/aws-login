@@ -163,6 +163,16 @@ If `~/.aws/config` is missing or no SSO sessions are configured, the tool will:
 - **Concurrent runs blocked**: Wait for the other `aws-login` process to finish; config updates are serialized to avoid corruption.
 - **Recover from corruption**: Run `aws-login doctor` to validate and restore configs from backups in `~/.aws-login/backups`.
 
+## Agent Skill
+
+An AI agent skill for `aws-login` is available in the [open agent skills ecosystem](https://skills.sh/). Install it with the skills CLI so your AI assistant knows how to use `aws-login` to authenticate, switch accounts, and configure profiles:
+
+```bash
+npx skills add ericcecchi/aws-login
+```
+
+Once installed, agents will automatically invoke `aws-login` when AWS authentication is needed.
+
 ## Development
 
 ```bash

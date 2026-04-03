@@ -307,4 +307,17 @@ Workflow file: `.github/workflows/release.yml`.
 
 ## AI Skill
 
-The file `.agents/skills/aws-login-cli/SKILL.md` contains comprehensive CLI documentation designed for AI agent consumption. Keep it updated when CLI behavior changes.
+The file `.agents/skills/aws-login-cli/SKILL.md` contains comprehensive CLI documentation designed for AI agent consumption.
+
+**When to update `SKILL.md`:** Any change that affects how a user or agent would invoke the CLI or interpret its output requires a corresponding update to `SKILL.md`. This includes:
+
+- New flags or positional arguments added or removed
+- Changed flag names, default values, or behavior
+- New or removed subcommands (e.g., `doctor`)
+- Changes to output format (e.g., `--print-env`, `--set-profile`)
+- Changes to profile naming conventions
+- Changes to Kubernetes context switching behavior
+- New error messages or exit codes that agents need to handle
+- New onboarding or configuration flows
+
+**How to update:** Edit `.agents/skills/aws-login-cli/SKILL.md` as part of the same PR that introduces the behavioral change. Treat `SKILL.md` as a user-facing document — write in clear, imperative language, and include updated command examples.
