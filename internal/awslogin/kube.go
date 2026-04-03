@@ -127,7 +127,7 @@ func maybeSwitchKubeAuto(accountID, region, explicitContext, profileName, eksRol
 	for _, ctx := range matches {
 		logLine(w, fmt.Sprintf("  %s", ctx))
 	}
-	chosen, err := chooseInteractive(matches, func(s string) string { return s })
+	chosen, err := chooseInteractive(matches, "Kubernetes context", func(s string) string { return s })
 	if err != nil {
 		logLine(w, fmt.Sprintf("⚠️  Context selection cancelled: %v", err))
 		return

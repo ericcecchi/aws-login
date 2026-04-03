@@ -82,7 +82,7 @@ func validateAWSConfigFile(path string) error {
 		if message == "" {
 			message = "aws cli could not parse config"
 		}
-		return fmt.Errorf(message)
+		return errors.New(message)
 	}
 	return nil
 }
