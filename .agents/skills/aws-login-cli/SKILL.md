@@ -68,7 +68,6 @@ aws-login --version
 | `--non-interactive` | Fail instead of prompting (for CI/scripts) |
 | `--print-env` | Print full credential export statements to stdout |
 | `--set-profile` | Print `export AWS_PROFILE=<name>` to stdout |
-| `--shell-init` | Print shell integration script for eval |
 | `--doctor` | Validate and repair AWS/Kubernetes config files |
 | `--version`, `-v` | Print version |
 
@@ -108,13 +107,19 @@ Example: `prod-admin`
 
 ## Shell Integration
 
-Add to your shell rc file for automatic `AWS_PROFILE` setting:
+Run once to install the shell wrapper:
 
 ```bash
-eval "$(aws-login --shell-init)"
+aws-login --install
 ```
 
-This wraps `aws-login` so that `AWS_PROFILE` is automatically exported to your shell after login.
+This updates your shell rc files (`.bashrc`, `.zshrc`, `.zprofile`, `config.fish`) to automatically load an `aws-login` wrapper that sets `AWS_PROFILE` in your current shell after login. No `eval` needed.
+
+To remove:
+
+```bash
+aws-login --uninstall
+```
 
 ## Kubernetes Integration
 
