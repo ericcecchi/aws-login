@@ -96,13 +96,12 @@ func resolveSession(cfg *ini.File, w io.Writer, ssoSessionFlag, profileFlag stri
 		if nonInteractive {
 			return SessionInfo{}, fmt.Errorf("multiple SSO sessions available; specify --sso-session or --profile")
 		}
-		logLine(w, "Select an AWS SSO session:")
 		names := make([]string, 0, len(sessions))
 		for name := range sessions {
 			names = append(names, name)
 		}
 		sort.Strings(names)
-		chosen, err := chooseInteractive(names, func(name string) string {
+		chosen, err := chooseInteractive(names, "AWS SSO session", func(name string) string {
 			session := sessions[name]
 			return fmt.Sprintf("%s (%s)", name, session.StartURL)
 		})

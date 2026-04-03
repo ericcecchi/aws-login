@@ -81,8 +81,7 @@ func resolveAccount(accounts []AccountInfo, query string, w io.Writer, nonIntera
 	sort.Slice(sorted, func(i, j int) bool {
 		return strings.ToLower(sorted[i].AccountName) < strings.ToLower(sorted[j].AccountName)
 	})
-	logLine(w, "Select an AWS account:")
-	selected, err := chooseInteractive(sorted, func(acct AccountInfo) string {
+	selected, err := chooseInteractive(sorted, "AWS account", func(acct AccountInfo) string {
 		return fmt.Sprintf("%s (%s)", acct.AccountName, acct.AccountID)
 	})
 	if err != nil {
@@ -136,8 +135,7 @@ func resolveRole(roles []RoleInfo, query string, w io.Writer, nonInteractive boo
 	sort.Slice(sorted, func(i, j int) bool {
 		return strings.ToLower(sorted[i].RoleName) < strings.ToLower(sorted[j].RoleName)
 	})
-	logLine(w, "Select a role:")
-	selected, err := chooseInteractive(sorted, func(role RoleInfo) string {
+	selected, err := chooseInteractive(sorted, "Role", func(role RoleInfo) string {
 		return role.RoleName
 	})
 	if err != nil {

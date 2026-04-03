@@ -5,7 +5,7 @@ default:
     @just --list
 
 # Install binary to GOBIN/GOPATH
-install:
+install: build
     go install .
 
 # Build binary into bin/

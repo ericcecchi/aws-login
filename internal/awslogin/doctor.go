@@ -60,7 +60,7 @@ func runDoctor(w io.Writer) error {
 	}
 
 	if len(issues) > 0 {
-		return fmt.Errorf(strings.Join(issues, "; "))
+		return errors.New(strings.Join(issues, "; "))
 	}
 
 	if len(repairs) == 0 {
@@ -90,7 +90,7 @@ func validateKubeConfigFile(path string) error {
 		if message == "" {
 			message = "kubectl failed to parse config"
 		}
-		return fmt.Errorf(message)
+		return errors.New(message)
 	}
 	return nil
 }
