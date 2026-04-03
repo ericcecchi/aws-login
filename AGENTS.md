@@ -65,15 +65,15 @@ If tests fail, do not commit. Fix the failure or update tests to reflect intenti
 
 Tests in `testhelpers_test.go` inject fake `aws` and `kubectl` executables into a temp `PATH` so the full CLI flow runs without real AWS calls. Control test behavior via environment variables:
 
-| Variable | Purpose |
-|---|---|
-| `AWS_LOGIN_TEST_ACCOUNTS_JSON` | JSON returned by `aws sso list-accounts` |
-| `AWS_LOGIN_TEST_ROLES_JSON` | JSON returned by `aws sso list-account-roles` |
-| `AWS_LOGIN_TEST_CREDS_JSON` | JSON returned by `aws sso get-role-credentials` |
-| `AWS_LOGIN_TEST_EKS_JSON` | JSON returned by `aws eks list-clusters` |
-| `AWS_LOGIN_TEST_IDENTITY_JSON` | JSON returned by `aws sts get-caller-identity` |
+| Variable                            | Purpose                                                 |
+| ----------------------------------- | ------------------------------------------------------- |
+| `AWS_LOGIN_TEST_ACCOUNTS_JSON`      | JSON returned by `aws sso list-accounts`                |
+| `AWS_LOGIN_TEST_ROLES_JSON`         | JSON returned by `aws sso list-account-roles`           |
+| `AWS_LOGIN_TEST_CREDS_JSON`         | JSON returned by `aws sso get-role-credentials`         |
+| `AWS_LOGIN_TEST_EKS_JSON`           | JSON returned by `aws eks list-clusters`                |
+| `AWS_LOGIN_TEST_IDENTITY_JSON`      | JSON returned by `aws sts get-caller-identity`          |
 | `AWS_LOGIN_TEST_CONFIGURE_SET_FILE` | File path where stub logs each `aws configure set` call |
-| `AWS_LOGIN_TEST_SSO_CACHE_DIR` | Directory where stub writes a fake SSO token cache file |
+| `AWS_LOGIN_TEST_SSO_CACHE_DIR`      | Directory where stub writes a fake SSO token cache file |
 
 **Setup helpers:**
 
@@ -275,13 +275,13 @@ Use this whenever the user needs to pick from a list. It checks for TTY presence
 
 Releases are created automatically on every push to `main`. Versioning is driven by **Conventional Commits** via Semantic Release.
 
-| Commit format | Version bump |
-|---|---|
-| `feat: add support for profile aliases` | minor |
-| `fix: handle missing sso sessions` | patch |
-| `feat!: drop legacy awscli v1 support` | major |
-| `fix!: change default region behavior` | major |
-| Body contains `BREAKING CHANGE: ...` | major |
+| Commit format                           | Version bump |
+| --------------------------------------- | ------------ |
+| `feat: add support for profile aliases` | minor        |
+| `fix: handle missing sso sessions`      | patch        |
+| `feat!: drop legacy awscli v1 support`  | major        |
+| `fix!: change default region behavior`  | major        |
+| Body contains `BREAKING CHANGE: ...`    | major        |
 
 Workflow file: `.github/workflows/release.yml`.
 
