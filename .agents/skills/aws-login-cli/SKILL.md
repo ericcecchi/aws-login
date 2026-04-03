@@ -63,7 +63,7 @@ aws-login --version
 | `--profile <name>` | Use a specific AWS profile name instead of auto-generated |
 | `--sso-session <name>` | AWS SSO session name |
 | `--region <region>` | AWS region override |
-| `--kube-context <name>` | Explicit kubectl context to switch to |
+| `--kube-context <name>` | Switch to this context and save as account default |
 | `--no-kube` | Skip Kubernetes context switching |
 | `--non-interactive` | Fail instead of prompting (for CI/scripts) |
 | `--print-env` | Print full credential export statements to stdout |
@@ -122,9 +122,18 @@ After login, `aws-login` automatically:
 
 1. Lists EKS clusters for the selected account
 2. Updates kubeconfig for each cluster
-3. Switches to the first matching kube context
+3. Filters contexts to those matching the account (by account ID or cluster name)
+4. **If one context matches** — switches to it automatically
+5. **If multiple contexts match**:
+   - Checks `~/.aws-login/kube-prefs.json` for a saved preference for this account
+   - If a preference exists and is still valid, uses it (logs "Using saved Kubernetes context: …")
+   - If no preference (or it is stale), prompts interactively via fuzzy finder and saves the choice for next time
+   - In `--non-interactive` mode, skips the switch with a warning instead of prompting
+6. **`--kube-context <name>`** — bypasses discovery, switches directly, and saves as preference
 
-Skip with `--no-kube`.
+Skip entirely with `--no-kube`. Force a one-time context with `--kube-context`.
+
+Preferences are stored per account ID in `~/.aws-login/kube-prefs.json`.
 
 ## Requirements
 

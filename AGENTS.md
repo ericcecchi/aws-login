@@ -65,15 +65,15 @@ If tests fail, do not commit. Fix the failure or update tests to reflect intenti
 
 Tests in `testhelpers_test.go` inject fake `aws` and `kubectl` executables into a temp `PATH` so the full CLI flow runs without real AWS calls. Control test behavior via environment variables:
 
-| Variable | Purpose |
-|---|---|
-| `AWS_LOGIN_TEST_ACCOUNTS_JSON` | JSON returned by `aws sso list-accounts` |
-| `AWS_LOGIN_TEST_ROLES_JSON` | JSON returned by `aws sso list-account-roles` |
-| `AWS_LOGIN_TEST_CREDS_JSON` | JSON returned by `aws sso get-role-credentials` |
-| `AWS_LOGIN_TEST_EKS_JSON` | JSON returned by `aws eks list-clusters` |
-| `AWS_LOGIN_TEST_IDENTITY_JSON` | JSON returned by `aws sts get-caller-identity` |
+| Variable                            | Purpose                                                 |
+| ----------------------------------- | ------------------------------------------------------- |
+| `AWS_LOGIN_TEST_ACCOUNTS_JSON`      | JSON returned by `aws sso list-accounts`                |
+| `AWS_LOGIN_TEST_ROLES_JSON`         | JSON returned by `aws sso list-account-roles`           |
+| `AWS_LOGIN_TEST_CREDS_JSON`         | JSON returned by `aws sso get-role-credentials`         |
+| `AWS_LOGIN_TEST_EKS_JSON`           | JSON returned by `aws eks list-clusters`                |
+| `AWS_LOGIN_TEST_IDENTITY_JSON`      | JSON returned by `aws sts get-caller-identity`          |
 | `AWS_LOGIN_TEST_CONFIGURE_SET_FILE` | File path where stub logs each `aws configure set` call |
-| `AWS_LOGIN_TEST_SSO_CACHE_DIR` | Directory where stub writes a fake SSO token cache file |
+| `AWS_LOGIN_TEST_SSO_CACHE_DIR`      | Directory where stub writes a fake SSO token cache file |
 
 **Setup helpers:**
 
@@ -275,13 +275,13 @@ Use this whenever the user needs to pick from a list. It checks for TTY presence
 
 Releases are created automatically on every push to `main`. Versioning is driven by **Conventional Commits** via Semantic Release.
 
-| Commit format | Version bump |
-|---|---|
-| `feat: add support for profile aliases` | minor |
-| `fix: handle missing sso sessions` | patch |
-| `feat!: drop legacy awscli v1 support` | major |
-| `fix!: change default region behavior` | major |
-| Body contains `BREAKING CHANGE: ...` | major |
+| Commit format                           | Version bump |
+| --------------------------------------- | ------------ |
+| `feat: add support for profile aliases` | minor        |
+| `fix: handle missing sso sessions`      | patch        |
+| `feat!: drop legacy awscli v1 support`  | major        |
+| `fix!: change default region behavior`  | major        |
+| Body contains `BREAKING CHANGE: ...`    | major        |
 
 Workflow file: `.github/workflows/release.yml`.
 
@@ -296,7 +296,7 @@ Workflow file: `.github/workflows/release.yml`.
 - `internal/awslogin/profile.go` — Profile naming and `aws configure set` calls
 - `internal/awslogin/aws.go` — AWS CLI wrappers (list accounts, roles, credentials)
 - `internal/awslogin/config.go` — AWS config file loading, SSO session discovery
-- `internal/awslogin/kube.go` — EKS cluster discovery and kube context switching
+- `internal/awslogin/kube.go` — EKS cluster discovery, kube context switching, and per-account context preference persistence (`~/.aws-login/kube-prefs.json`)
 - `internal/awslogin/mutation.go` — Mutation lock and backup/restore for config files
 - `internal/awslogin/cache.go` — Stale-while-revalidate account/role caching
 - `internal/awslogin/util.go` — Shell init scripts, logging, formatting
@@ -307,4 +307,17 @@ Workflow file: `.github/workflows/release.yml`.
 
 ## AI Skill
 
-The file `.agents/skills/aws-login-cli/SKILL.md` contains comprehensive CLI documentation designed for AI agent consumption. Keep it updated when CLI behavior changes.
+The file `.agents/skills/aws-login-cli/SKILL.md` contains comprehensive CLI documentation designed for AI agent consumption.
+
+**When to update `SKILL.md`:** Any change that affects how a user or agent would invoke the CLI or interpret its output requires a corresponding update to `SKILL.md`. This includes:
+
+- New flags or positional arguments added or removed
+- Changed flag names, default values, or behavior
+- New or removed subcommands (e.g., `doctor`)
+- Changes to output format (e.g., `--print-env`, `--set-profile`)
+- Changes to profile naming conventions
+- Changes to Kubernetes context switching behavior
+- New error messages or exit codes that agents need to handle
+- New onboarding or configuration flows
+
+**How to update:** Edit `.agents/skills/aws-login-cli/SKILL.md` as part of the same PR that introduces the behavioral change. Treat `SKILL.md` as a user-facing document — write in clear, imperative language, and include updated command examples.
