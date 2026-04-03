@@ -54,6 +54,7 @@ type Args struct {
 	NonInteractive bool
 	PrintEnv       bool
 	SetProfile     bool
-	ShellInit      bool
+	Install        bool
+	Uninstall      bool
 	Version        bool
 }

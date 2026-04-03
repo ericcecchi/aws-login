@@ -3,6 +3,7 @@ package awslogin
 import (
 	"bytes"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -115,16 +116,6 @@ func TestParseArgsDoctorRejectsExtraPositionals(t *testing.T) {
 	}
 }
 
-func TestParseArgsShellInit(t *testing.T) {
-	args, err := parseArgs([]string{"--shell-init"})
-	if err != nil {
-		t.Fatalf("parseArgs error: %v", err)
-	}
-	if !args.ShellInit {
-		t.Fatalf("expected ShellInit=true")
-	}
-}
-
 func TestParseArgsShortVersion(t *testing.T) {
 	args, err := parseArgs([]string{"-v"})
 	if err != nil {
@@ -132,6 +123,16 @@ func TestParseArgsShortVersion(t *testing.T) {
 	}
 	if !args.Version {
 		t.Fatalf("expected Version=true for -v")
+	}
+}
+
+func TestParseArgsInstallAndUninstallConflict(t *testing.T) {
+	_, err := parseArgs([]string{"--install", "--uninstall"})
+	if err == nil {
+		t.Fatalf("expected error when --install and --uninstall are used together")
+	}
+	if !strings.Contains(err.Error(), "cannot use --install and --uninstall together") {
+		t.Fatalf("unexpected error message: %v", err)
 	}
 }
 

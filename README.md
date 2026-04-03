@@ -84,19 +84,44 @@ aws-login doctor
 
 ## Shell Integration
 
-To make `AWS_PROFILE` automatically set in your shell after login, add the shell wrapper once:
+To use `aws-login` as a convenient shell wrapper that automatically sets `AWS_PROFILE`, install the shell integration once:
 
 ```bash
-eval "$(aws-login --shell-init)"
+aws-login --install
 ```
 
-This defines an `aws-login` shell function that runs the binary and applies `AWS_PROFILE` to your current shell session.
-For non-bash shells, set `AWS_LOGIN_SHELL` to `fish` before running the command.
+This updates your shell configuration files (`.bashrc`, `.zshrc`, `.zprofile`, etc.) to automatically load the `aws-login` wrapper function when you start a new shell. After installation, simply use:
 
-For full credential exports (access key, secret, token), use `--print-env` instead:
+```bash
+aws-login myaccount admin
+```
+
+The `AWS_PROFILE` environment variable will be automatically set in your current shell session. No `eval` needed.
+
+> **To activate immediately** without restarting your shell, source the init file once:
+> ```bash
+> source ~/.aws-login/shell-init/init.zsh   # zsh
+> source ~/.aws-login/shell-init/init.sh    # bash
+> source ~/.aws-login/shell-init/init.fish  # fish
+> ```
+> The `--install` output also prints the exact command for your current shell.
+
+To uninstall, run:
+
+```bash
+aws-login --uninstall
+```
+
+**Note:** For full credential exports (access key, secret, token), use `--print-env`:
 
 ```bash
 eval "$(aws-login --print-env myaccount admin)"
+```
+
+Or use `--set-profile` to export only the profile name:
+
+```bash
+eval "$(aws-login --set-profile myaccount admin)"
 ```
 
 ## Configuration
