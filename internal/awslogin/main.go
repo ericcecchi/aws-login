@@ -147,7 +147,7 @@ func Run() {
 			return err
 		}
 		if !args.NoKube {
-			maybeSwitchKubeAuto(account.AccountID, region, kubeContext, profileName, profileInfo.EKSRoleARN, writer)
+			maybeSwitchKubeAuto(account.AccountID, region, kubeContext, profileName, profileInfo.EKSRoleARN, args.NonInteractive, writer)
 		}
 		return nil
 	}); err != nil {

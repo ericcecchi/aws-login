@@ -296,7 +296,7 @@ Workflow file: `.github/workflows/release.yml`.
 - `internal/awslogin/profile.go` — Profile naming and `aws configure set` calls
 - `internal/awslogin/aws.go` — AWS CLI wrappers (list accounts, roles, credentials)
 - `internal/awslogin/config.go` — AWS config file loading, SSO session discovery
-- `internal/awslogin/kube.go` — EKS cluster discovery and kube context switching
+- `internal/awslogin/kube.go` — EKS cluster discovery, kube context switching, and per-account context preference persistence (`~/.aws-login/kube-prefs.json`)
 - `internal/awslogin/mutation.go` — Mutation lock and backup/restore for config files
 - `internal/awslogin/cache.go` — Stale-while-revalidate account/role caching
 - `internal/awslogin/util.go` — Shell init scripts, logging, formatting

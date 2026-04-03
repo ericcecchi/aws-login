@@ -4,18 +4,59 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
 	"strings"
 )
 
-func maybeSwitchKubeAuto(accountID, region, explicitContext, profileName, eksRoleARN string, w io.Writer) {
+const kubePrefsPath = "~/.aws-login/kube-prefs.json"
+
+func loadKubePref(accountID string) (string, error) {
+	path := expandPath(kubePrefsPath)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	var prefs map[string]string
+	if err := json.Unmarshal(data, &prefs); err != nil {
+		return "", err
+	}
+	return prefs[accountID], nil
+}
+
+func saveKubePref(accountID, contextName string) error {
+	path := expandPath(kubePrefsPath)
+	prefs := map[string]string{}
+	if data, err := os.ReadFile(path); err == nil {
+		_ = json.Unmarshal(data, &prefs)
+	}
+	prefs[accountID] = contextName
+	data, err := json.MarshalIndent(prefs, "", "  ")
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0o600)
+}
+
+func maybeSwitchKubeAuto(accountID, region, explicitContext, profileName, eksRoleARN string, nonInteractive bool, w io.Writer) {
 	if !commandExists("kubectl") {
 		logLine(w, "⚠️  kubectl not found; skipping context switch")
 		return
 	}
 	if explicitContext != "" {
-		_ = switchContextWithKubectl(explicitContext, w)
+		if err := switchContextWithKubectl(explicitContext, w); err != nil {
+			logLine(w, fmt.Sprintf("⚠️  Failed to switch context: %v", err))
+			return
+		}
+		// Remember this choice for the account so future logins default to it.
+		if accountID != "" {
+			_ = saveKubePref(accountID, explicitContext)
+		}
 		return
 	}
 	if !commandExists("aws") {
@@ -29,7 +70,6 @@ func maybeSwitchKubeAuto(accountID, region, explicitContext, profileName, eksRol
 		return
 	}
 	if len(clusters) == 0 {
-		logLine(w, "⚠️  No EKS clusters found for this account")
 		return
 	}
 
@@ -51,14 +91,57 @@ func maybeSwitchKubeAuto(accountID, region, explicitContext, profileName, eksRol
 		return
 	}
 
-	logLine(w, "Available Kubernetes contexts for this account:")
-	for _, ctx := range matches {
-		logLine(w, fmt.Sprintf("- %s", ctx))
+	// Single match: switch automatically.
+	if len(matches) == 1 {
+		if err := switchContextWithKubectl(matches[0], w); err != nil {
+			logLine(w, fmt.Sprintf("⚠️  Failed to switch context: %v", err))
+		}
+		return
 	}
 
-	chosen := matches[0]
+	// Multiple matches: check for a saved preference first.
+	if accountID != "" {
+		if pref, err := loadKubePref(accountID); err == nil && pref != "" {
+			for _, ctx := range matches {
+				if ctx == pref {
+					logLine(w, fmt.Sprintf("ℹ️  Using saved Kubernetes context: %s", pref))
+					if err := switchContextWithKubectl(pref, w); err != nil {
+						logLine(w, fmt.Sprintf("⚠️  Failed to switch context: %v", err))
+					}
+					return
+				}
+			}
+			// Saved preference no longer matches any available context; fall through.
+			logLine(w, fmt.Sprintf("ℹ️  Saved context %q is no longer available; please choose a new one", pref))
+		}
+	}
+
+	// Non-interactive: skip rather than block.
+	if nonInteractive {
+		logLine(w, "⚠️  Multiple Kubernetes contexts found; skipping auto-switch (use --kube-context to specify one)")
+		return
+	}
+
+	// Interactive: let the user pick and remember the choice.
+	logLine(w, "Multiple Kubernetes contexts are available for this account:")
+	for _, ctx := range matches {
+		logLine(w, fmt.Sprintf("  %s", ctx))
+	}
+	chosen, err := chooseInteractive(matches, func(s string) string { return s })
+	if err != nil {
+		logLine(w, fmt.Sprintf("⚠️  Context selection cancelled: %v", err))
+		return
+	}
 	if err := switchContextWithKubectl(chosen, w); err != nil {
 		logLine(w, fmt.Sprintf("⚠️  Failed to switch context: %v", err))
+		return
+	}
+	if accountID != "" {
+		if err := saveKubePref(accountID, chosen); err != nil {
+			logLine(w, fmt.Sprintf("⚠️  Failed to save context preference: %v", err))
+		} else {
+			logLine(w, fmt.Sprintf("ℹ️  Saved %s as your default context for this account", chosen))
+		}
 	}
 }
 
