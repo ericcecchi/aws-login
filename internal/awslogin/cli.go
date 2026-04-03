@@ -24,6 +24,8 @@ func parseArgs(args []string) (Args, error) {
 	printEnv := fs.Bool("print-env", false, "Print export statements to stdout")
 	setProfile := fs.Bool("set-profile", false, "Export AWS_PROFILE after login")
 	shellInit := fs.Bool("shell-init", false, "Print shell integration script")
+	install := fs.Bool("install", false, "Install shell integration")
+	uninstall := fs.Bool("uninstall", false, "Uninstall shell integration")
 	versionFlag := fs.Bool("version", false, "Print version")
 	versionShort := fs.Bool("v", false, "Print version")
 
@@ -69,6 +71,8 @@ func parseArgs(args []string) (Args, error) {
 		PrintEnv:       *printEnv,
 		SetProfile:     *setProfile,
 		ShellInit:      *shellInit,
+		Install:        *install,
+		Uninstall:      *uninstall,
 		Version:        *versionFlag || *versionShort,
 	}, nil
 }
@@ -81,6 +85,8 @@ func printUsage(w io.Writer) {
 	_, _ = w.Write([]byte("       aws-login --set-profile\n"))
 	_, _ = w.Write([]byte("       aws-login doctor\n"))
 	_, _ = w.Write([]byte("       aws-login --print-env\n"))
+	_, _ = w.Write([]byte("       aws-login --install\n"))
+	_, _ = w.Write([]byte("       aws-login --uninstall\n"))
 	_, _ = w.Write([]byte("       aws-login --shell-init\n"))
 	_, _ = w.Write([]byte("       aws-login --version\n"))
 }
@@ -108,6 +114,8 @@ func normalizeArgs(args []string) []string {
 		"--set-profile":     {},
 		"--doctor":          {},
 		"--shell-init":      {},
+		"--install":         {},
+		"--uninstall":       {},
 		"--version":         {},
 	}
 

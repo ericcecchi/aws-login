@@ -23,6 +23,22 @@ func Run() {
 		return
 	}
 
+	if args.Install {
+		if err := installShellIntegration(detectShell(), os.Stdout); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to install shell integration: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
+	if args.Uninstall {
+		if err := uninstallShellIntegration(detectShell(), os.Stdout); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to uninstall shell integration: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	if args.Doctor {
 		doctorWriter := logWriter(args)
 		if err := runDoctor(doctorWriter); err != nil {
@@ -170,4 +186,3 @@ func Run() {
 		fmt.Printf("export AWS_PROFILE=%s\n", shellQuote(profileName))
 	}
 }
-

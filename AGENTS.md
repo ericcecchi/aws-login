@@ -142,7 +142,7 @@ internal/awslogin/
   cache.go        # Stale-while-revalidate caching with background goroutine refresh
   mutation.go     # Filesystem mutex + backup/restore for safe config mutations
   kube.go         # EKS cluster discovery and kubectl context switching
-  util.go         # Shell init scripts, path helpers, formatting utilities
+  util.go         # Shell integration (--install/--uninstall), helpers, formatting
   doctor.go       # Health check and repair (--doctor flag)
   ui.go           # Interactive fuzzy selection (go-fuzzyfinder, generics)
   *_test.go       # Tests co-located with their source files
@@ -254,8 +254,22 @@ Use this whenever the user needs to pick from a list. It checks for TTY presence
 - `--non-interactive` — disables fuzzy selection; errors on ambiguous input
 - `--no-kube` — skips kubectl context switching
 - `--doctor` — health-check and repair mode
-- `--shell-init` — prints shell function wrapper (eval this in shell rc)
+- `--install` — installs shell integration (one-time setup; modifies shell rc files)
+- `--uninstall` — removes shell integration from shell rc files
+- `--shell-init` — prints shell function wrapper (legacy; deprecated in favor of `--install`)
 - `--version` / `-v` — prints version
+
+### Shell Integration
+
+The recommended workflow is to run `aws-login --install` once, which:
+
+1. Creates shell initialization scripts in `~/.aws-login/shell-init/`
+2. Appends sourcing lines to shell rc files (`.bashrc`, `.zshrc`, `.zprofile`, `.config/fish/config.fish`)
+3. Provides an `aws-login` wrapper function that automatically sets `AWS_PROFILE`
+
+After installation, users simply run `aws-login account role` and the profile is set in their current shell. No eval or manual setup needed for subsequent commands.
+
+The `--shell-init` flag is kept for backward compatibility but users should prefer `--install`.
 
 ---
 
