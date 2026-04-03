@@ -5,8 +5,8 @@
 
 ## Build and Run
 - Build: `go build .`
-- Build binary into `bin/`: `make build`
-- Install to GOBIN/GOPATH: `make install`
+- Build binary into `bin/`: `just build`
+- Install to GOBIN/GOPATH: `just install`
 
 ## Tests
 Run: `go test ./...`
