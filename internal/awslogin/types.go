@@ -27,13 +27,13 @@ type RoleCredentials struct {
 }
 
 type ProfileInfo struct {
-	SSOSession  string
-	SSOStart    string
-	SSORegion   string
-	Region      string
-	AccountID   string
-	RoleName    string
-	EKSRoleARN  string
+	SSOSession string
+	SSOStart   string
+	SSORegion  string
+	Region     string
+	AccountID  string
+	RoleName   string
+	EKSRoleARN string
 }
 
 type SSOCacheEntry struct {
