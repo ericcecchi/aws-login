@@ -156,12 +156,19 @@ func TestShellInitHookLine(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.shell, func(t *testing.T) {
-			line := shellInitHookLine(tt.shell)
+			line, err := shellInitHookLine(tt.shell)
+			if err != nil {
+				t.Fatalf("shellInitHookLine failed: %v", err)
+			}
 			if !strings.Contains(line, tt.contains) {
 				t.Fatalf("expected %q in hook line, got %q", tt.contains, line)
 			}
 			if !strings.Contains(line, ".aws-login") {
 				t.Fatalf("expected .aws-login path in hook line, got %q", line)
+			}
+			// Path must be quoted so spaces in HOME are handled correctly.
+			if !strings.Contains(line, "'") {
+				t.Fatalf("expected shell-quoted path in hook line, got %q", line)
 			}
 		})
 	}
@@ -267,11 +274,36 @@ func TestInstallShellIntegration(t *testing.T) {
 	if !strings.Contains(output, "✅ Shell integration installed") {
 		t.Fatalf("expected completion message")
 	}
+	if !strings.Contains(output, "To activate in your current session") {
+		t.Fatalf("expected source-to-activate hint, got: %q", output)
+	}
 
-	// Verify hook was added
+	// Verify hook was added with quoting
 	content := readFileOrDie(t, zshrc)
-	if !strings.Contains(content, "source") || !strings.Contains(content, ".aws-login") {
-		t.Fatalf("expected hook line in zshrc, got: %s", content)
+	if !strings.Contains(content, "source '") || !strings.Contains(content, ".aws-login") {
+		t.Fatalf("expected quoted hook line in zshrc, got: %s", content)
+	}
+}
+
+func TestInstallShellIntegrationCreatesMissingPrimaryRCFile(t *testing.T) {
+	home := setTempHome(t)
+
+	// Fish config dir does not exist — install should create it
+	buf := &bytes.Buffer{}
+	err := installShellIntegration("fish", buf)
+	if err != nil {
+		t.Fatalf("installShellIntegration failed: %v", err)
+	}
+
+	output := buf.String()
+	if !strings.Contains(output, "✓ Created") {
+		t.Fatalf("expected 'Created' message for missing rc file, got: %q", output)
+	}
+
+	fishRC := home + "/.config/fish/config.fish"
+	content := readFileOrDie(t, fishRC)
+	if !strings.Contains(content, "source '") || !strings.Contains(content, ".aws-login") {
+		t.Fatalf("expected hook line in created config.fish, got: %s", content)
 	}
 }
 

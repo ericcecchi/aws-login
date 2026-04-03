@@ -98,6 +98,14 @@ aws-login myaccount admin
 
 The `AWS_PROFILE` environment variable will be automatically set in your current shell session. No `eval` needed.
 
+> **To activate immediately** without restarting your shell, source the init file once:
+> ```bash
+> source ~/.aws-login/shell-init/init.zsh   # zsh
+> source ~/.aws-login/shell-init/init.sh    # bash
+> source ~/.aws-login/shell-init/init.fish  # fish
+> ```
+> The `--install` output also prints the exact command for your current shell.
+
 To uninstall, run:
 
 ```bash

@@ -136,15 +136,14 @@ func shellInitFile(shell string) (string, error) {
 	}
 }
 
-// shellInitHookLine returns the line to add to shell rc file for the given shell
-func shellInitHookLine(shell string) string {
-	file, _ := shellInitFile(shell)
-	switch shell {
-	case "fish":
-		return fmt.Sprintf("source %s", file)
-	default:
-		return fmt.Sprintf("source %s", file)
+// shellInitHookLine returns the line to add to shell rc file for the given shell.
+// The path is single-quoted so home directories containing spaces work correctly.
+func shellInitHookLine(shell string) (string, error) {
+	file, err := shellInitFile(shell)
+	if err != nil {
+		return "", err
 	}
+	return fmt.Sprintf("source '%s'", file), nil
 }
 
 // ensureShellInitFiles creates the shell initialization files
@@ -254,15 +253,39 @@ func installShellIntegration(shell string, w io.Writer) error {
 		return fmt.Errorf("failed to create shell init files: %w", err)
 	}
 
-	hookLine := shellInitHookLine(shell)
+	hookLine, err := shellInitHookLine(shell)
+	if err != nil {
+		return err
+	}
+
+	initFile, err := shellInitFile(shell)
+	if err != nil {
+		return err
+	}
+
 	rcFiles, err := shellRCFiles(shell)
 	if err != nil {
 		return err
 	}
 
-	for _, rcFile := range rcFiles {
+	anyUpdated := false
+	for i, rcFile := range rcFiles {
 		if _, err := os.Stat(rcFile); os.IsNotExist(err) {
-			// File doesn't exist, skip it (user may not use this shell variant)
+			if i != 0 {
+				// Secondary rc file missing — skip silently
+				continue
+			}
+			// Primary rc file missing — create it (and any parent dirs)
+			if err := os.MkdirAll(filepath.Dir(rcFile), 0755); err != nil {
+				logLine(w, fmt.Sprintf("Warning: Could not create directory for %s: %v", rcFile, err))
+				continue
+			}
+			if err := os.WriteFile(rcFile, []byte(hookLine+"\n"), 0644); err != nil {
+				logLine(w, fmt.Sprintf("Warning: Could not create %s: %v", rcFile, err))
+				continue
+			}
+			logLine(w, fmt.Sprintf("✓ Created %s", rcFile))
+			anyUpdated = true
 			continue
 		}
 
@@ -278,29 +301,32 @@ func installShellIntegration(shell string, w io.Writer) error {
 			continue
 		}
 
-		// Append the hook line
-		var newContent string
-		if strings.HasSuffix(contentStr, "\n") {
-			newContent = contentStr + "\n" + hookLine + "\n"
-		} else {
-			newContent = contentStr + "\n" + hookLine + "\n"
-		}
-
+		newContent := strings.TrimRight(contentStr, "\n") + "\n\n" + hookLine + "\n"
 		if err := os.WriteFile(rcFile, []byte(newContent), 0644); err != nil {
 			logLine(w, fmt.Sprintf("Warning: Could not write to %s: %v", rcFile, err))
 			continue
 		}
 
 		logLine(w, fmt.Sprintf("✓ Updated %s", rcFile))
+		anyUpdated = true
+	}
+
+	if !anyUpdated {
+		logLine(w, fmt.Sprintf("ℹ️  No rc files were updated. To activate manually, add to your shell config:\n   %s", hookLine))
 	}
 
 	logLine(w, "✅ Shell integration installed successfully!")
-	logLine(w, "   A new shell will have the aws-login wrapper available automatically.")
+	logLine(w, fmt.Sprintf("   To activate in your current session: source '%s'", initFile))
 	return nil
 }
 
 // uninstallShellIntegration removes the shell integration
 func uninstallShellIntegration(shell string, w io.Writer) error {
+	hookLine, err := shellInitHookLine(shell)
+	if err != nil {
+		return err
+	}
+
 	rcFiles, err := shellRCFiles(shell)
 	if err != nil {
 		return err
@@ -318,7 +344,6 @@ func uninstallShellIntegration(shell string, w io.Writer) error {
 		}
 
 		contentStr := string(content)
-		hookLine := shellInitHookLine(shell)
 
 		// Remove the hook line if present
 		if strings.Contains(contentStr, hookLine) {

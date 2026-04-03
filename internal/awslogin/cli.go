@@ -32,6 +32,10 @@ func parseArgs(args []string) (Args, error) {
 		return Args{}, err
 	}
 
+	if *install && *uninstall {
+		return Args{}, fmt.Errorf("cannot use --install and --uninstall together")
+	}
+
 	positional := fs.Args()
 	account := *accountFlag
 	role := *roleFlag
