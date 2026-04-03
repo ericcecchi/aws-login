@@ -27,16 +27,11 @@ From GitHub:
 go install github.com/ericcecchi/aws-login@latest
 ```
 
-If the repo is private, set:
-
-```bash
-export GOPRIVATE=github.com/ericcecchi/*
-```
-
 From a local clone:
 
 ```bash
-cd ~/Projects/aws-login
+git clone https://github.com/ericcecchi/aws-login.git
+cd aws-login
 go install .
 ```
 
@@ -171,8 +166,12 @@ If `~/.aws/config` is missing or no SSO sessions are configured, the tool will:
 ## Development
 
 ```bash
-go build .
-go test ./...
+# Build the binary into bin/aws-login
+just build
+# Run tests
+just test
+# Install locally from source
+just install
 ```
 
 ## Conventional Commits

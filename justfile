@@ -11,4 +11,8 @@ install:
 # Build binary into bin/
 build:
     mkdir -p bin
-    go build -o bin/{{binary}} .
+    go build -o bin/{{ binary }} .
+
+# Run tests
+test:
+    go test ./...
