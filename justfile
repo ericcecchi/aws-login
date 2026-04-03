@@ -11,7 +11,7 @@ install: build
 # Build binary into bin/
 build:
     mkdir -p bin
-    go build -o bin/{{ binary }} .
+    go build -ldflags "-X github.com/ericcecchi/aws-login/internal/awslogin.version=$(git describe --tags --abbrev=0 2>/dev/null || echo dev)" -o bin/{{ binary }} .
 
 # Run tests
 test:
